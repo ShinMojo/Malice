@@ -1,0 +1,32 @@
+{
+  "name": "Malice",
+  "version": "0.1.0",
+  "description": "Malice",
+  "main": "dist/driver.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified! Configure in package.json\" && exit 1",
+    "start": "(coffee --compile --output dist --watch src/* &>/dev/null &);node ./dist/driver.js"
+  },
+  "repository": "",
+  "keywords": [
+    "node.js",
+    "eclipse",
+    "nodeclipse"
+  ],
+  "author": "",
+  "license": "MIT",
+  "readmeFilename": "README.md",
+  "dependencies": {
+    "cryo": "0.0.5",
+    "moment": "^2.10.6",
+    "nesh": "^1.6.0",
+    "node-serialize": "0.0.4",
+    "node-uuid": "^1.4.3",
+    "nodemon": "^1.5.0",
+    "underscore": "^1.8.3",
+    "watchr": "^2.4.13"
+  },
+  "devDependencies": {
+    "coffee-script": "^1.10.0"
+  }
+}
