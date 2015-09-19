@@ -10,13 +10,17 @@ if not global.$game.classes.Player
 
 player = global.$game.classes.Player.prototype
 
-
 player.init = (@name, @user, @password, @lastIp, @location = global.$game.$index.rooms.$nowhere) ->
   throw new Error("Player names must be unique.") if global.$game.$index.players[@name]
+  throw new Error("Player must be associated with a user.") if not @user
   global.$game.$index.players[@name] = this
   @salt = require("node-uuid").v4()
+  @user.player = this
 
 player.moveTo = global.$game.base.moveTo
 
 player.tell = (what)->
-  @user?.socket.write(what + "\n");
+  @user.tell(what);
+
+player.walkThrough = (exit) ->
+  exit.accept(this)

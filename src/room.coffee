@@ -19,7 +19,7 @@ room.asSeenBy = (who)->
   return @description
 
 if not global.$game.$index.rooms.$nowhere
-  global.$game.$index.rooms.$nowhere = new global.$game.classes.Room("Nowhere", "Nowhere. Literally. The place where things go when they are not in the game.")
+  new global.$game.classes.Room("$nowhere", "Nowhere. Literally. The place where things go when they are not in the game.")
 
 global.$game.$index.roomExits = {} if !global.$game.$index.roomExits
 
@@ -37,7 +37,7 @@ exit.init = (@name, @description, @leaveMessage, @arriveMessage, @aliases, @sour
   global.$game.$index.roomExits[@source.name + " -> " + @destination.name + " (" + @name + ")"] = this
   @source.exits.push(this)
 
-exit.walkThrough = (who)->
+exit.accept = (who)->
   who.tell(@leaveMessage)
   who.moveTo(@destination)
   who.tell(@arriveMessage)

@@ -106,6 +106,11 @@ global.$driver.login = (socket) ->
   loginPrompt = "Login> ";
   passwordPrompt = "Password> ";
   rl.question(loginPrompt, (login)->
+    if(login.equals("register"))
+      rl.close()
+      return global.$game.register(socket, ->
+        global.$driver.login(socket)
+      )
     rl.question(passwordPrompt, (password) ->
       rl.close();
       user = _(global.$game.users).find((user) ->

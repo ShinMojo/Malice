@@ -12,3 +12,6 @@ user.init = (@name, @email, @password, @lastIp) ->
   @salt = require("node-uuid").v4()
 
 user.moveTo = global.$game.base.moveTo
+
+user.tell = (what) ->
+  global.$driver.authenticatedUsers[this]?.write(what)

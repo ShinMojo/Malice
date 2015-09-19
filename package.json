@@ -6,9 +6,10 @@
   "scripts": {
     "test": "echo \"Error: no test specified! Configure in package.json\" && exit 1",
     "watch": "(start coffee --compile --output dist --watch src)",
+    "watch-mac": "(coffee --compile --output dist --watch src)",
     "start":"node ./dist/driver.js",
     "compile": "coffee --compile --output dist src"
-    
+
   },
   "repository": "",
   "keywords": [
