@@ -1,33 +1,43 @@
-game = global.$game
-classes = game.classes
 
-if not classes.Room
-  classes.Room = class Room
+if not global.$game.classes.Room
+  global.$game.classes.Room = class Room
     constructor:->
       @type = "$game.classes.Room"
       this.init.apply(this, arguments)
 
-room = classes.Room.prototype
+room = global.$game.classes.Room.prototype
+global.$game.$index = {} if not global.$game.$index
+global.$game.$index.rooms = {} if !global.$game.$index.rooms
 
-room.init = (@name, @description, @aliases = [], @contents = [], location = game.rooms.$nowhere) ->
+room.init = (@name, @description, @aliases = [], @contents = [], location = global.$game.$index.rooms.$nowhere) ->
   throw new Error("Rooms must have a name.") if not @name
-  throw new Error("Room name must be unique.") if game.$index.rooms[@name]
-  this.moveTo(location)
-  game.$index.rooms[@name] = this
+  throw new Error("Room name must be unique.") if global.$game.$index.rooms[@name]
+  global.$game.$index.rooms[@name] = this
   @exits = []
 
 room.asSeenBy = (who)->
   return @description
 
-if not game.rooms.$nowhere
-  game.rooms.$nowhere = new classes.Room("Nowhere", "Nowhere. Literally. The place where things go when they are not in the game.")
+if not global.$game.$index.rooms.$nowhere
+  global.$game.$index.rooms.$nowhere = new global.$game.classes.Room("Nowhere", "Nowhere. Literally. The place where things go when they are not in the game.")
 
-if not classes.RoomExit
-  classes.Room = class RoomExit
+global.$game.$index.roomExits = {} if !global.$game.$index.roomExits
+
+if not global.$game.RoomExit
+  global.$game.classes.RoomExit = class RoomExit
     constructor:->
       @type = "$game.classes.RoomExit"
       this.init.apply(this, arguments)
 
-exit = classes.RoomExit.prototype
+exit = global.$game.classes.RoomExit.prototype
 
-exit.init = (@name, @description, @direction, @leaveMessage, @arriveMessage, @aliases, @destination)
+exit.init = (@name, @description, @leaveMessage, @arriveMessage, @aliases, @source, @destination)->
+  throw new Error("RoomExits must have a name.") if not @name && @description && @direction && @leaveMessage && @arriveMessage && @aliases && @source && @destination
+  throw new Error("RoomExit names must be unique.") if global.$game.$index.roomExits[@source.name + " -> " + @destination.name + " (" + @name + ")"]
+  global.$game.$index.roomExits[@source.name + " -> " + @destination.name + " (" + @name + ")"] = this
+  @source.exits.push(this)
+
+exit.walkThrough = (who)->
+  who.tell(@leaveMessage)
+  who.moveTo(@destination)
+  who.tell(@arriveMessage)

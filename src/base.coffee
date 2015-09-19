@@ -1,14 +1,12 @@
 global.$game.base = {} if not global.$game.base
 
-base = global.$game.base
-
-base.move = (what, to)->
-  what.location = $game.rooms.$nowhere if not what.location
+global.$game.base.move = (what, to)->
+  what.location = global.$game.$index.rooms.$nowhere if not what.location
   to.contents = [] if not to.contents
   if what.location.contents
     what.location.contents = what.location.contents.remove(what)
   to.contents.push what
   what.location = to
 
-base.moveTo = (to)->
-  base.move(this, to)
+global.$game.base.moveTo = (to)->
+  global.$game.base.move(this, to)

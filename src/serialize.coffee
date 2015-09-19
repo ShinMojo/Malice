@@ -10,6 +10,15 @@ UNDEFINEDFLAG = '_$$ND_UNDEFINED$$_'
 KEYPATHSEPARATOR = '_$$.$$_'
 ISNATIVEFUNC = /^function\s*[^(]*\(.*\)\s*\{\s*\[native code\]\s*\}$/
 
+
+if (typeof String.prototype.startsWith != 'function')
+  String.prototype.startsWith = (str)->
+    return this.slice(0, str.length) == str
+
+if (typeof String.prototype.endsWith != 'function')
+  String.prototype.endsWith = (str)->
+    return this.slice(-str.length) == str
+
 getKeyPath = (obj, path) ->
   try
     path = path.split(KEYPATHSEPARATOR)
@@ -40,7 +49,10 @@ serializeFunction = (func, ignoreNativeFunc) ->
   funcStr
 
 unserializeFunction = (func, originObj) ->
-  funcObj = eval('( ' + func[FUNCFLAG] + ' )')
+  vm = require("vm")
+  tempFunc = undefined
+  tempFunc = vm.runInThisContext('tempFunc = ( ' + func[FUNCFLAG] + ' )')
+  funcObj = tempFunc
   delete func[FUNCFLAG]
   for key of func
     funcObj[key] = func[key]
