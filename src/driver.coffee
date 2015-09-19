@@ -9,7 +9,6 @@ global.$driver.getSocket = (user)->
   global.$driver.authenticatedUsers[user]
 serializer = require('./serialize.js')
 _ = require('underscore')
-readline = require('readline')
 repl = require('repl')
 
 Array.prototype.remove = ->
@@ -22,16 +21,6 @@ Array.prototype.remove = ->
     while ((ax = this.indexOf(what)) != -1)
       this.splice(ax, 1)
   return this
-
-global.$driver.order = (obj, ordering) ->
-  props = _(Object.getOwnPropertyNames(obj)).filter (item) ->
-    ordering.indexOf(item) == -1
-  ordered = {}
-  ordering.forEach (item) ->
-    ordered[item] = obj[item]
-  props.forEach (item) ->
-    ordered[item] = obj[item]
-  ordered
 
 global.$driver.save = ->
   state = serializer.serialize(global.$game)
@@ -80,68 +69,10 @@ global.$driver.load = (filename) ->
       console.log 'Checkpoint loaded.'
     catch e
       console.log e
-
   return
-
-global.$driver.emitLines = (stream) ->
-  backlog = ''
-  stream.on 'data', (data) ->
-    backlog += data
-    n = backlog.indexOf('\n')
-    # got a \n? emit one or more 'line' events
-    while ~n
-      stream.emit 'line', backlog.substring(0, n)
-      backlog = backlog.substring(n + 1)
-      n = backlog.indexOf('\n')
-    return
-  stream.on 'end', ->
-    if backlog
-      stream.emit 'line', backlog
-    return
-  return
-
-
-global.$driver.login = (socket) ->
-  rl = readline.createInterface(socket, socket)
-  loginPrompt = "Login> ";
-  passwordPrompt = "Password> ";
-  rl.question(loginPrompt, (login)->
-    if(login.equals("register"))
-      rl.close()
-      return global.$game.register(socket, ->
-        global.$driver.login(socket)
-      )
-    rl.question(passwordPrompt, (password) ->
-      rl.close();
-      user = _(global.$game.users).find((user) ->
-        return user.name.toLowerCase() == login.toLowerCase()
-      )
-      return global.$driver.login(socket) if !user
-      crypto = require "crypto"
-      hash = crypto.createHash "sha256"
-      hash.update password
-      hash.update user.salt + ""
-      if(user.password != hash.digest("hex"))
-        return socket.end("Bad login!\n")
-      socket.write("Successfully authenticated as " + login + ".\n")
-      global.$driver.authenticatedUsers[user] = socket
-      socket.user = user
-      global.$driver.handleInput(socket)
-    );
-  );
-
 
 global.$driver.handleNewConnection = (socket) ->
-  global.$driver.login socket
-
-global.$driver.handleInput = (socket) ->
-  repl.start(
-    prompt: '> ',
-    input: socket,
-    output: socket,
-    useGlobal:true
-  ).on 'exit', ->
-    socket.end();
+  global.$game.login socket
 
 global.$driver.startDriver = ->
   net = require('net')
@@ -184,11 +115,3 @@ watchr.watch
         loader.load("./" + filePath)
       catch e
         console.log e
-
-
-
-
-
-
-
-

@@ -17,7 +17,7 @@ player.init = (@name, @user, @password, @lastIp, @location = global.$game.$index
   @salt = require("node-uuid").v4()
   @user.player = this
 
-player.moveTo = global.$game.base.moveTo
+player.moveTo = global.$game.common.moveTo
 
 player.tell = (what)->
   @user.tell(what);
