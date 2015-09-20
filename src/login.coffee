@@ -1,39 +1,156 @@
-readline = require('readline')
+require("./dist/user.js")
+global.$game.$index.users = {} if not global.$game.$index.users
 
-global.$game.login = (socket) ->
+global.$game.common = {} if not global.$game.common
+global.$game.common.login = {} if not global.$game.common.login
+
+global.$game.common.login.handleNewConnection = (socket) ->
+  global.$game.common.login.showWelcomeMessage socket, ->
+    global.$game.common.login.loginLoop(socket)
+
+global.$game.common.login.loginLoop = (socket) ->
+  readline = require('readline')
+  _ = require("underscore")
   rl = readline.createInterface(socket, socket)
   loginPrompt = "Login> ";
   passwordPrompt = "Password> ";
-  rl.question(loginPrompt, (login)->
-    if(login.equals("register"))
+  socket.tell("Please login with your user name, character name or email address.")
+  socket.tell("If you don't have a user, please type " + "register".underline.bold + " to create a one.")
+  socket.tell("One account per person, please.".bold)
+  socket.tell("If you require any assistance please email "+ "help@...com".bold + ".")
+  rl.question loginPrompt, (login)->
+    console.log login
+    if(login == "register")
       rl.close()
-      return global.$game.register(socket, ->
-        global.$driver.login(socket)
-      )
+      return global.$game.common.login.register socket, ->
+        global.$game.common.login.loginLoop(socket)
     rl.question(passwordPrompt, (password) ->
-      rl.close();
-      user = _(global.$game.users).find((user) ->
-        return user.name.toLowerCase() == login.toLowerCase()
+      rl.close()
+      user = _(global.$game.$index.users).find((user) ->
+        return user.name.toLowerCase() == login.toLowerCase() || user.email.toLowerCase() == login.toLowerCase()
       )
-      return global.$driver.login(socket) if !user
+      if not user
+        user = _(global.$game.$index.players).find((player) ->
+          return player.name.toLowerCase() == login.toLowerCase()
+        )?.user
+      return setTimeout(->
+        socket.tell("No such user, player, email or bad password.")
+        global.$game.common.login.loginLoop(socket)
+      , 0) if not user
       crypto = require "crypto"
       hash = crypto.createHash "sha256"
       hash.update password
       hash.update user.salt + ""
       if(user.password != hash.digest("hex"))
-        return socket.end("Bad login!\n")
-      socket.write("Successfully authenticated as " + login + ".\n")
+        setTimeout(->
+          socket.tell("Unknown user or bad password.")
+          global.$game.common.login.loginLoop(socket)
+        , 0)
+        return
+      if not user.verified
+        global.$game.common.question socket, "Please enter your confirmation code: ", (check) ->
+          return "Invalid confirmation code." if check != user.confirmationCode
+        , (answer) ->
+          user.verified = true
+          socket.tell("Successfully authenticated as " + login + ". Welcome back!")
+          global.$driver.authenticatedUsers[user] = socket
+          socket.user = user
+          global.$game.common.login.repl(socket)
+        return
+      socket.tell("Successfully authenticated as " + login + ". Welcome back!")
       global.$driver.authenticatedUsers[user] = socket
       socket.user = user
-      global.$game.handleInput(socket)
-    );
-  );
+      global.$game.common.login.repl(socket)
+    )
 
-global.$game.handleInput = (socket) ->
+global.$game.common.login.showWelcomeMessage = (socket, callback) ->
+  colors = require("colors")
+  readline = require('readline')
+  loader = require("./dist/loader.js")
+  loader.loadResource "./txt/welcome.txt", (err, text)->
+    socket.tell(text.red + "\r\n")
+    callback()
+
+global.$game.common.login.register = (socket) ->
+  global.$game.common.login.getUserName socket, (username) ->
+    global.$game.common.login.getPassword socket, (password) ->
+      socket.tell("Great. Just one more thing. We need a valid email in case you ever lose your password. " + "We absolutely promise on a stack of Ono-Sendai Cyberspace 7's that we will only ever use it for VERY infrequent game related communication.".bold)
+      global.$game.common.question socket, "Please enter your email: ", (email) ->
+        if not global.$game.common.login.validateEmail(email) then return "Invalid email address."
+      , (validEmail) ->
+        socket.tell("Perfect! We've created a user for you with the user name " + username.bold + " and sent an email to " + validEmail.bold + " with your confirmation code.\n Now we need you to login with the username you just used, and type in the confirmation code from your email. If you run into any problems, please email help@...com")
+        user = new global.$game.classes.User(username, validEmail, password, socket.remoteAddress)
+        code = global.$game.common.login.createConfirmationCode()
+        user.confirmationCode = code
+        user.verified = false
+        global.$game.common.login.sendEmail(username, validEmail, code)
+        global.$game.common.login.loginLoop(socket)
+        #send email with code!!!
+
+global.$game.common.login.createConfirmationCode = ->
+    x=Math.random().toString(36).substring(7).substr(0,5)
+    while (x.length!=5)
+      x=Math.random().toString(36).substring(7).substr(0,5)
+    return x
+
+global.$game.common.login.sendEmail = (username, email, confirmationCode) ->
+  nodemailer = require('nodemailer');
+
+  transporter = nodemailer.createTransport
+    service: 'Gmail',
+    auth:
+      user: 'shinmojo',
+      pass: 'Zabbas4242!'
+
+  mailOptions =
+    from: 'ShinMojo@gmail.com',
+    to: email,
+    subject: 'Confirmation code for ' + username + " from Malice.",
+    text: 'Hello, ' + username + ". Here is your confirmation code: " + confirmationCode
+
+  transporter.sendMail mailOptions, (error, info) ->
+    if(error)
+      console.log(error)
+    else
+      console.log('Message sent: ' + info.response)
+
+global.$game.common.login.getPassword = (socket, callback) ->
+  global.$game.common.question socket, "Please enter your password (8 characters minimum): ", (answer) ->
+    return "Password must be 8 or more characters." if answer.trim().length < 8
+  , (password)->
+    global.$game.common.question socket, "Please enter your password again: ", (again) ->
+      return false
+    , (again) ->
+      if(again != password)
+        socket.tell("Your passwords did not match. Try again.")
+        return setTimeout global.$game.common.login.getPassword socket, callback
+      callback(password)
+
+global.$game.common.login.validateEmail = (email) ->
+  re = /\S+@\S+\.\S+/;
+  re.test(email)
+
+global.$game.common.login.getUserName = (socket, callback) ->
+  global.$game.common.question socket, "What would you like your user name to be? ", (answer) ->
+    _ = require("underscore")
+    if _(global.$game.$index.users).find (user) ->
+      user.name.toLowerCase() == answer
+    then return "That user name is taken."
+    if _(global.$game.$index.players).find (player) ->
+      player.name.toLowerCase() == answer
+    then return "That user name is taken."
+    if answer.length < 3 then return "User names must be 3 or more characters."
+    if not /^[a-zA-Z0-9]*$/.test(answer) then return "User names cannot contain any non alphanumeric characters."
+    return false
+  , (answer) ->
+    callback(answer)
+
+global.$game.common.login.repl = (socket) ->
+  repl = require("repl")
   repl.start(
     prompt: '> ',
     input: socket,
     output: socket,
     useGlobal:true
   ).on 'exit', ->
-    socket.end();
+    socket.end()

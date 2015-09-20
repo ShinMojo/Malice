@@ -1,5 +1,7 @@
+fs=require("fs")
+vm = require("vm")
+
 module.exports.testLoad = (name) ->
-  vm = require("vm")
   m = require('module')
   sandbox = vm.createContext({})
   statement = "require(\"" + name + "\")"
@@ -10,8 +12,19 @@ module.exports.testLoad = (name) ->
     console.log e
     return false
 
-module.exports.load = (name) ->
-  fs = require("fs")
-  vm = require("vm")
-  code = fs.readFileSync(name)
-  vm.runInThisContext(code.toString())
+
+
+module.exports.load = (name, callback) ->
+  module.exports.loadResource((err, resource)->
+    callback(vm.runInThisContext(resource))
+  )
+
+module.exports.loadSync = (name) ->
+  vm.runInThisContext(module.exports.loadResourceSync(name))
+
+module.exports.loadResourceSync = (name) ->
+  fs.readFileSync(name).toString()
+
+module.exports.loadResource = (name, callback) ->
+  fs.readFile name, (err, data)->
+    callback err, data.toString()

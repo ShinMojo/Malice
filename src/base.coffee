@@ -10,3 +10,16 @@ global.$game.common.move = (what, to)->
 
 global.$game.common.moveTo = (to)->
   global.$game.common.move(this, to)
+
+global.$game.common.question = (socket, prompt, criteria, callback)->
+  readline = require("readline")
+  rl = readline.createInterface(socket, socket)
+  rl.question prompt, (answer) ->
+    rl.close()
+    result = criteria(answer)
+    if result
+      socket.tell(result)
+      return setTimeout ->
+        global.$game.common.question socket, prompt, criteria, callback
+      , 0
+    callback(answer)

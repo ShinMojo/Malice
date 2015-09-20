@@ -1,15 +1,20 @@
+require('app-module-path').addPath(__dirname + '/dist');
+serializer = require('./serialize.js')
+loader = require("./loader.js")
+watchr = require("watchr")
+_ = require('underscore')
+repl = require('repl')
+fs = require('fs')
+require('colors')
+
 global.$driver = {}
 global.$game = {}
 $driver = global.$driver
 $game = global.$game
-fs = require('fs')
 global.$driver.clients = []
 global.$driver.authenticatedUsers = {};
 global.$driver.getSocket = (user)->
   global.$driver.authenticatedUsers[user]
-serializer = require('./serialize.js')
-_ = require('underscore')
-repl = require('repl')
 
 Array.prototype.remove = ->
   what = undefined
@@ -21,6 +26,14 @@ Array.prototype.remove = ->
     while ((ax = this.indexOf(what)) != -1)
       this.splice(ax, 1)
   return this
+
+if (typeof String.prototype.startsWith != 'function')
+  String.prototype.startsWith = (str)->
+    return this.slice(0, str.length) == str
+
+if (typeof String.prototype.endsWith != 'function')
+  String.prototype.endsWith = (str)->
+    return this.slice(-str.length) == str
 
 global.$driver.save = ->
   state = serializer.serialize(global.$game)
@@ -72,11 +85,26 @@ global.$driver.load = (filename) ->
   return
 
 global.$driver.handleNewConnection = (socket) ->
-  global.$game.login socket
+  readline = require("readline")
+  rl = readline.createInterface(socket, socket)
+  rl.question "Can you see the " + "colors? ".rainbow, (useColor) ->
+    if !useColor.toLowerCase().startsWith("n")
+      socket.tell = (str)->
+        socket.write(str + "\n")
+    else
+      socket.tell = (str)->
+        socket.write(str.strip + "\n")
+    rl.close()
+    global.$game.common.login.handleNewConnection(socket)
 
 global.$driver.startDriver = ->
-  net = require('net')
+  net = require('./telnet.js')
   net.createServer((socket) ->
+    socket.do.transmit_binary()
+    socket.do.window_size()
+    socket.on 'window size', (e) ->
+      if e.command == 'sb'
+        console.log 'telnet window resized to %d x %d', e.width, e.height
     global.$driver.clients.push socket
     socket.alive = true
     socket.on 'end', ->
@@ -84,14 +112,12 @@ global.$driver.startDriver = ->
       global.$driver.clients.splice global.$driver.clients.indexOf(socket), 1
       delete(global.$driver.authenticatedUsers[socket.user]) if socket.user
     global.$driver.handleNewConnection socket
-
-  ).listen 5000
-  # Put a friendly message on the terminal of the server.
-  console.log 'Server listening at port 5000\n'
+  ).listen 5555
+  console.log 'Server listening at port 5555\n'
 
 global.$driver.load()
 global.$driver.startDriver()
-global.$game.startGame() if global.$game.startGame
+global.$game.common.startGame() if global.$game.common.startGame
 setInterval global.$driver.save, 1000 * 60 * 10
 
 repl.start(
@@ -102,9 +128,6 @@ repl.start(
 ).on 'exit', ->
   socket.end();
 
-loader = require("./loader.js")
-watchr = require("watchr")
-
 watchr.watch
   paths: ["./dist"],
   listeners:
@@ -112,6 +135,10 @@ watchr.watch
       try
         if filePath.endsWith("driver.js") or filePath.endsWith("loader.js") then return
         console.log("Reloading " + filePath)
-        loader.load("./" + filePath)
+        loader.loadSync("./" + filePath)
       catch e
         console.log e
+
+global.process.on('uncaughtException', function (err) {
+  console.log(err);
+})

@@ -7,9 +7,8 @@
     "test": "echo \"Error: no test specified! Configure in package.json\" && exit 1",
     "watch": "(start coffee --compile --output dist --watch src)",
     "watch-mac": "(coffee --compile --output dist --watch src)",
-    "start":"node ./dist/driver.js",
+    "start": "node ./dist/driver.js",
     "compile": "coffee --compile --output dist src"
-
   },
   "repository": "",
   "keywords": [
@@ -21,12 +20,16 @@
   "license": "MIT",
   "readmeFilename": "README.md",
   "dependencies": {
+    "app-module-path": "^1.0.4",
+    "colors": "^1.1.2",
     "cryo": "0.0.5",
     "moment": "^2.10.6",
     "nesh": "^1.6.0",
     "node-serialize": "0.0.4",
     "node-uuid": "^1.4.3",
+    "nodemailer": "^1.4.0",
     "nodemon": "^1.5.0",
+    "telnet": "0.0.1",
     "underscore": "^1.8.3",
     "watchr": "^2.4.13"
   },

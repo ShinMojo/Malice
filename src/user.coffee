@@ -8,10 +8,18 @@ if not global.$game.classes.User
 
 user = global.$game.classes.User.prototype
 
-user.init = (@name, @email, @password, @lastIp) ->
-  @salt = require("node-uuid").v4()
+global.$game.$index.users = {} if not global.$game.$index.users
 
-user.moveTo = global.$game.base.moveTo
+user.init = (@name, @email, password, @lastIp) ->
+  throw new Error("Username already in use.") if global.$game.$index.users[@name]
+  @salt = require("node-uuid").v4()
+  global.$game.$index.users[@name] = this
+  crypto = require "crypto"
+  hash = crypto.createHash "sha256"
+  hash.update password + @salt
+  @password = hash.digest("hex")
+
+user.moveTo = global.$game.common.moveTo
 
 user.tell = (what) ->
-  global.$driver.authenticatedUsers[this]?.write(what)
+  global.$driver.getSocket(this)?.tell(what)

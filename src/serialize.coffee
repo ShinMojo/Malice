@@ -50,9 +50,7 @@ serializeFunction = (func, ignoreNativeFunc) ->
 
 unserializeFunction = (func, originObj) ->
   vm = require("vm")
-  tempFunc = undefined
-  tempFunc = vm.runInThisContext('tempFunc = ( ' + func[FUNCFLAG] + ' )')
-  funcObj = tempFunc
+  funcObj = vm.runInThisContext('( ' + func[FUNCFLAG] + ' )')
   delete func[FUNCFLAG]
   for key of func
     funcObj[key] = func[key]
