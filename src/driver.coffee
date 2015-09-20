@@ -27,6 +27,13 @@ Array.prototype.remove = ->
       this.splice(ax, 1)
   return this
 
+Array.prototype.proportionate = (num, max)->
+  return this[0] if num == 0
+  return this[this.length-1] if num == max
+  percent = num / max
+  where = (this.length - 1) * percent
+  return this[parseInt(Math.min(this.length-2, Math.max(1,where)))]
+
 if (typeof String.prototype.startsWith != 'function')
   String.prototype.startsWith = (str)->
     return this.slice(0, str.length) == str
@@ -85,26 +92,13 @@ global.$driver.load = (filename) ->
   return
 
 global.$driver.handleNewConnection = (socket) ->
-  readline = require("readline")
-  rl = readline.createInterface(socket, socket)
-  rl.question "Can you see the " + "colors? ".rainbow, (useColor) ->
-    if !useColor.toLowerCase().startsWith("n")
-      socket.tell = (str)->
-        socket.write(str + "\n")
-    else
-      socket.tell = (str)->
-        socket.write(str.strip + "\n")
-    rl.close()
-    global.$game.common.login.handleNewConnection(socket)
+  global.$game.common.login.handleNewConnection(socket)
 
 global.$driver.startDriver = ->
   net = require('./telnet.js')
   net.createServer((socket) ->
     socket.do.transmit_binary()
     socket.do.window_size()
-    socket.on 'window size', (e) ->
-      if e.command == 'sb'
-        console.log 'telnet window resized to %d x %d', e.width, e.height
     global.$driver.clients.push socket
     socket.alive = true
     socket.on 'end', ->
@@ -139,6 +133,5 @@ watchr.watch
       catch e
         console.log e
 
-global.process.on('uncaughtException', function (err) {
+global.process.on 'uncaughtException', (err) ->
   console.log(err);
-})

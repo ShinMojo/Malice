@@ -5,8 +5,26 @@ global.$game.common = {} if not global.$game.common
 global.$game.common.login = {} if not global.$game.common.login
 
 global.$game.common.login.handleNewConnection = (socket) ->
-  global.$game.common.login.showWelcomeMessage socket, ->
-    global.$game.common.login.loginLoop(socket)
+  wrap = require("wordwrap")
+  readline = require("readline")
+  width = 80
+  socket.on 'window size', (e) ->
+    if e.command == 'sb'
+      console.log 'telnet window resized to %d x %d', e.width, e.height
+      width = e.width
+  rl = readline.createInterface(socket, socket)
+  rl.question "Can you see the " + "colors? ".rainbow, (useColor) ->
+    rl.close()
+    if !useColor.toLowerCase().startsWith("n")
+      socket.tell = (str)->
+        str.split("\n").forEach (s)->
+          socket.write(wrap(width)(s) + "\n")
+    else
+      socket.tell = (str)->
+        str.split("\n").forEach (s)->
+          socket.write(wrap(width)(s.strip) + "\n")
+    global.$game.common.login.showWelcomeMessage socket, ->
+      global.$game.common.login.loginLoop(socket)
 
 global.$game.common.login.loginLoop = (socket) ->
   readline = require('readline')
@@ -17,7 +35,7 @@ global.$game.common.login.loginLoop = (socket) ->
   socket.tell("Please login with your user name, character name or email address.")
   socket.tell("If you don't have a user, please type " + "register".underline.bold + " to create a one.")
   socket.tell("One account per person, please.".bold)
-  socket.tell("If you require any assistance please email "+ "help@...com".bold + ".")
+  socket.tell("If you require any assistance please email "+ "shinmojo@gmail.com".bold + ".")
   rl.question loginPrompt, (login)->
     console.log login
     if(login == "register")
@@ -49,7 +67,7 @@ global.$game.common.login.loginLoop = (socket) ->
         return
       if not user.verified
         global.$game.common.question socket, "Please enter your confirmation code: ", (check) ->
-          return "Invalid confirmation code." if check != user.confirmationCode
+          return "Invalid confirmation code." if check.toLowerCase() != user.confirmationCode.toLowerCase()
         , (answer) ->
           user.verified = true
           socket.tell("Successfully authenticated as " + login + ". Welcome back!")
@@ -60,7 +78,7 @@ global.$game.common.login.loginLoop = (socket) ->
       socket.tell("Successfully authenticated as " + login + ". Welcome back!")
       global.$driver.authenticatedUsers[user] = socket
       socket.user = user
-      global.$game.common.login.repl(socket)
+      user.handleConnection(socket)
     )
 
 global.$game.common.login.showWelcomeMessage = (socket, callback) ->
@@ -68,7 +86,7 @@ global.$game.common.login.showWelcomeMessage = (socket, callback) ->
   readline = require('readline')
   loader = require("./dist/loader.js")
   loader.loadResource "./txt/welcome.txt", (err, text)->
-    socket.tell(text.red + "\r\n")
+    socket.write(text.red + "\r\n")
     callback()
 
 global.$game.common.login.register = (socket) ->
@@ -78,7 +96,7 @@ global.$game.common.login.register = (socket) ->
       global.$game.common.question socket, "Please enter your email: ", (email) ->
         if not global.$game.common.login.validateEmail(email) then return "Invalid email address."
       , (validEmail) ->
-        socket.tell("Perfect! We've created a user for you with the user name " + username.bold + " and sent an email to " + validEmail.bold + " with your confirmation code.\n Now we need you to login with the username you just used, and type in the confirmation code from your email. If you run into any problems, please email help@...com")
+        socket.tell("Perfect! We've created a user for you with the user name " + username.bold + " and sent an email to " + validEmail.bold + " with your confirmation code.\n Now we need you to login with the username you just used, and type in the confirmation code from your email. If you run into any problems, please email shinmojo@gmail.com")
         user = new global.$game.classes.User(username, validEmail, password, socket.remoteAddress)
         code = global.$game.common.login.createConfirmationCode()
         user.confirmationCode = code
@@ -88,9 +106,9 @@ global.$game.common.login.register = (socket) ->
         #send email with code!!!
 
 global.$game.common.login.createConfirmationCode = ->
-    x=Math.random().toString(36).substring(7).substr(0,5)
+    x=Math.random().toString(36).substring(7).substr(0,5).toLowerCase()
     while (x.length!=5)
-      x=Math.random().toString(36).substring(7).substr(0,5)
+      x=Math.random().toString(36).substring(7).substr(0,5).toLowerCase()
     return x
 
 global.$game.common.login.sendEmail = (username, email, confirmationCode) ->
@@ -106,7 +124,7 @@ global.$game.common.login.sendEmail = (username, email, confirmationCode) ->
     from: 'ShinMojo@gmail.com',
     to: email,
     subject: 'Confirmation code for ' + username + " from Malice.",
-    text: 'Hello, ' + username + ". Here is your confirmation code: " + confirmationCode
+    text: 'Hello, ' + username + ". Here is your confirmation code: " + confirmationCode + "\nIf you didn't request this, then we apologize and please ignore this email."
 
   transporter.sendMail mailOptions, (error, info) ->
     if(error)

@@ -16,6 +16,7 @@ global.$game.common.question = (socket, prompt, criteria, callback)->
   rl = readline.createInterface(socket, socket)
   rl.question prompt, (answer) ->
     rl.close()
+    return criteria(answer) if not callback
     result = criteria(answer)
     if result
       socket.tell(result)
@@ -23,3 +24,6 @@ global.$game.common.question = (socket, prompt, criteria, callback)->
         global.$game.common.question socket, prompt, criteria, callback
       , 0
     callback(answer)
+
+
+
