@@ -103,7 +103,6 @@ global.$game.common.login.register = (socket) ->
         user.verified = false
         global.$game.common.login.sendEmail(username, validEmail, code)
         global.$game.common.login.loginLoop(socket)
-        #send email with code!!!
 
 global.$game.common.login.createConfirmationCode = ->
     x=Math.random().toString(36).substring(7).substr(0,5).toLowerCase()

@@ -25,5 +25,12 @@ global.$game.common.question = (socket, prompt, criteria, callback)->
       , 0
     callback(answer)
 
-
+global.$game.common.choice = (socket, prompt, choices, callback) ->
+  what = prompt + "\n"
+  choices.forEach (value, key)->
+    what += "[" + (key + 1) + "] " + value + "\n"
+  global.$game.common.question socket, what, (answer)->
+    return "Please enter a number between 1 and #{choices.length}." if isNaN(parseInt(answer)) || parseInt(answer) < 1 || parseInt(answer) > choices.length
+  , (finalAnswer) ->
+    callback(choices[parseInt(finalAnswer)-1])
 
