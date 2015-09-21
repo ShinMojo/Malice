@@ -82,8 +82,8 @@ user.makeNewPlayer = (socket)->
         socket.tell global.$game.classes.User.prototype.charGen.formatProgress(results)
         socket.tell "Now they may not be like that forever, but it may take a little doing to make changes after this."
         socket.tell "Are you satisfied with your character? Last chance to say no and make changes..."
-        return global.$game.common.question socket, "Continue with creating your character?\n", (criteria)->
-          if (criteria.toLowerCase().startsWith("y"))
+        return global.$game.common.yesorno socket, "Continue with creating your character?\n", (stop, go)->
+          if (go)
             #make the player
           else
             setTimeout makePlayerLoop, 0

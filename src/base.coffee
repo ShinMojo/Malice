@@ -23,9 +23,17 @@ global.$game.common.question = (socket, prompt, criteria, callback)->
       result = if criteria then criteria(answer) else false
       if result
         socket.tell(result)
-        setTimeout askQuestion, 0
+        return askQuestion()
       deferred.resolve(answer)
   askQuestion()
+  return deferred.promise.nodeify(callback)
+
+global.$game.common.yesorno = (socket, prompt, callback)->
+  deferred = require("q").defer()
+  global.$game.common.question socket, prompt, (criteria)->
+    return "Please answer yes or no." if not criteria.toLowerCase().startsWith("y") && not criteria.toLowerCase().startsWith("n")
+  , (err, answer)->
+    if answer.toLowerCase().startsWith("y") then deferred.resolve("Yes") else deferred.reject("No")
   return deferred.promise.nodeify(callback)
 
 global.$game.common.choice = (socket, prompt, choices, callback) ->
