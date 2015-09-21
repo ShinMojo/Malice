@@ -14,16 +14,16 @@ global.$game.common.moveTo = (to)->
 global.$game.common.question = (socket, prompt, criteria, callback)->
   deferred = require("q").defer()
   readline = require("readline")
-  rl = readline.createInterface(socket, socket)
   askQuestion = ->
+    rl = readline.createInterface(socket, socket)
     rl.question prompt, (answer) ->
       rl.close()
       if answer == "@abort"
         return deferred.reject("Abort")
-      result = criteria(answer) if criteria else false
+      result = if criteria then criteria(answer) else false
       if result
         socket.tell(result)
-        return setTimeout askQuestion, 0
+        setTimeout askQuestion, 0
       deferred.resolve(answer)
   askQuestion()
   return deferred.promise.nodeify(callback)
@@ -34,7 +34,6 @@ global.$game.common.choice = (socket, prompt, choices, callback) ->
   choices.forEach (value, key)->
     what += "[" + (key + 1) + "] " + value + "\n"
   global.$game.common.question socket, what, (answer)->
-    return false if answer.toLowerCase() == "@abort"
     return "Please enter a number between 1 and #{choices.length} or " + "@abort".underline + " to abort." if isNaN(parseInt(answer)) || parseInt(answer) < 1 || parseInt(answer) > choices.length
   , (err, finalAnswer) ->
     return deferred.reject("Abort") if err

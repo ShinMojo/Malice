@@ -42,7 +42,7 @@ Please make a slection from the following options:
 
   global.$game.common.question socket, prompt, (answer) ->
     return "Invalid selection." if answer.trim() != "1" && answer.trim() != "2"
-  , (answer)->
+  , (err, answer)->
     if(answer == "2")
       return socket.end()
     if(answer == "1")
@@ -64,19 +64,29 @@ user.connected = ->
 
 user.makeNewPlayer = (socket)->
   socket.tell("Warning: ".red + "You must complete this process without disconnecting, otherwise you will have to start over.")
-  options = ["Name", "Birthday", "Sex", "Appearance", "Stats", "Skills", "Abort"]
-  remaining = ["Name", "Birthday", "Sex", "Appearance", "Stats", "Skills"]
+  options = ["Name", "Birthday", "Sex", "Appearance", "Abort"]
+  remaining = ["Name", "Birthday", "Sex", "Appearance"]
   results = {}
   makePlayerLoop = ->
     progress = global.$game.classes.User.prototype.charGen.formatProgress(results)
     prompt = "#{'Character Generation Main Menu'.bold}\n"
     prompt += progress if progress
     prompt += "Things you still must do before you finish: #{remaining.join(', ')}"
-    if remaining.length == 0 && options.length == 6
+    if remaining.length == 0 && options.length == 5
       options.push("Finish")
     global.$game.common.choice socket, prompt, options, (err, option)->
-      if option == "Abort" then return
-      if option == "Finish" then return
+      if option == "Abort" then return global.$game.classes.User.prototype.handleConnection(socket)
+      if option == "Finish"
+        console.log("finish")
+        socket.tell("This is how you're character is going to start:")
+        socket.tell global.$game.classes.User.prototype.charGen.formatProgress(results)
+        socket.tell "Now they may not be like that forever, but it may take a little doing to make changes after this."
+        socket.tell "Are you satisfied with your character? Last chance to say no and make changes..."
+        return global.$game.common.question socket, "Continue with creating your character?\n", (criteria)->
+          if (criteria.toLowerCase().startsWith("y"))
+            #make the player
+          else
+            setTimeout makePlayerLoop, 0
       global.$game.classes.User.prototype.charGen[option] socket, (stats)->
         results[option] = stats
         remaining.remove option
@@ -97,7 +107,7 @@ user.charGen.Birthday = (socket, callback) ->
     before = global.$game.common.gameTime()
     before = before.year(before.year()-18)
     return "please enter a birthday making your character at least 18 years of age." if before.isBefore(date)
-  , (birthday)->
+  , (err, birthday)->
     moment = require("moment")
     callback(moment(birthday, "MM/DD/YYYY"))
 
@@ -114,7 +124,6 @@ user.charGen.formatProgress = (progress)->
   if progress.Appearance then results += "Weight: " + progress.Appearance.weight + "kg (#{global.$game.constants.player.formatWeight(progress.Appearance.weight, progress.Appearance.height)} for your height)\n"
   if progress.Appearance then results += "Eyes: " + progress.Appearance.eyeStyle + " " + progress.Appearance.eyeColor + " eyes\n"
   if progress.Appearance then results += "Hair: " + progress.Appearance.hairCut + " " + progress.Appearance.hairColor + " " + progress.Appearance.hairStyle + "\n"
-
   return results
 
 user.charGen.Name = (socket, callback)->
@@ -140,11 +149,12 @@ This can be their first name, last name, or a nick name that they're always call
         return "Please enter their last name from birth." if criteria.trim().length < 2
       , (err, lastName)->
         global.$game.common.question socket, "And if they have a middle name, please enter it now, otherwise leave it blank.\n", null, (err, middleName)->
+          console.log("ok")
           callback
-            alias:alias
-            firstName:firstName
-            lastName:lastName
-            middleName:middleName
+            alias:alias.trim()
+            firstName:firstName.trim()
+            lastName:lastName.trim()
+            middleName:middleName.trim()
 
 user.charGen.Sex = (socket, callback)->
   q = global.$game.common.question
