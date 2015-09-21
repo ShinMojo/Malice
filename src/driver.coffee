@@ -97,7 +97,6 @@ global.$driver.handleNewConnection = (socket) ->
 global.$driver.startDriver = ->
   net = require('./telnet.js')
   net.createServer((socket) ->
-    socket.do.transmit_binary()
     socket.do.window_size()
     global.$driver.clients.push socket
     socket.alive = true
@@ -134,4 +133,4 @@ watchr.watch
         console.log e
 
 global.process.on 'uncaughtException', (err) ->
-  console.log(err);
+  console.log(err, err.stack.split("\n"))

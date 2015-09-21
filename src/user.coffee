@@ -52,32 +52,32 @@ Please make a slection from the following options:
         ready = ->
           x--
           if(x == 0)
-            user.player.goIC(socket)
+            socket.user.player.goIC(socket)
           else
             socket.tell(x + "...")
             setTimeout ready, 1000
         return setTimeout ready, 1000
-      user.makeNewPlayer(socket)
+      socket.user.makeNewPlayer(socket)
 
 user.connected = ->
   if global.$driver.getSocket() then return true else return false
 
 user.makeNewPlayer = (socket)->
   socket.tell("Warning: ".red + "You must complete this process without disconnecting, otherwise you will have to start over.")
-  options = ["Name", "Birthday", "Sex", "Looks", "Stats", "Skills", "Abort"]
-  remaining = ["Name", "Birthday", "Sex", "Looks", "Stats", "Skills"]
+  options = ["Name", "Birthday", "Sex", "Appearance", "Stats", "Skills", "Abort"]
+  remaining = ["Name", "Birthday", "Sex", "Appearance", "Stats", "Skills"]
   results = {}
   makePlayerLoop = ->
-    prompt = """
-#{'Character Generation Main Menu'.bold}
-Things you still must do before you finish: #{remaining.join(', ')}
-"""
+    progress = global.$game.classes.User.prototype.charGen.formatProgress(results)
+    prompt = "#{'Character Generation Main Menu'.bold}\n"
+    prompt += progress if progress
+    prompt += "Things you still must do before you finish: #{remaining.join(', ')}"
     if remaining.length == 0 && options.length == 6
       options.push("Finish")
-    global.$game.common.choice socket, prompt, options, (option)->
+    global.$game.common.choice socket, prompt, options, (err, option)->
       if option == "Abort" then return
       if option == "Finish" then return
-      user.charGen[option] socket, (stats)->
+      global.$game.classes.User.prototype.charGen[option] socket, (stats)->
         results[option] = stats
         remaining.remove option
         makePlayerLoop()
@@ -85,16 +85,37 @@ Things you still must do before you finish: #{remaining.join(', ')}
 
 user.charGen = {} if not user.charGen
 
+user.charGen.Birthday = (socket, callback) ->
+  socket.tell("The City of Malice exists in " + "real-time".bold + ", " + "85 years in the future".underline + ", in the Pacific time zone.")
+  socket.tell("The current game time is #{global.$game.common.gameTime().format('dddd, MMMM Do, YYYY')}. Please take that into consideration when you give your birthdate. Your character should have an appropriate birth date to reflect the game's timeline.")
+  global.$game.common.question socket, "Please enter your birthday in the format: MM/DD/YYYY. So for March 3rd, 2068, you would enter: 3/3/2068.\n", (criteria)->
+    moment = require("moment")
+    date = moment(criteria.trim(), "MM/DD/YYYY")
+    console.log(date.isBefore(moment()))
+    return "Please enter a valid birthday." if not date.isValid()
+    return "Please enter a birthday after today's date." if date.isBefore(moment())
+    before = global.$game.common.gameTime()
+    before = before.year(before.year()-18)
+    return "please enter a birthday making your character at least 18 years of age." if before.isBefore(date)
+  , (birthday)->
+    moment = require("moment")
+    callback(moment(birthday, "MM/DD/YYYY"))
+
+
 user.charGen.formatProgress = (progress)->
   results = ""
-  results += "Alias: " + progress.Name.alias + "\n" if progress.Name
-  results += "First Name: " + progress.Name.firstName + "\n" if progress.Name
-  results += "Last Name: " + progress.Name.lastName + "\n" if progress.Name
-  results += "Middle Name: " + progress.Name.middleName + "\n" if progress?.Name?.middleName
-  results += "Sex: " + progress.Sex + "\n" if progress.Sex
-  results += "Birthday: " + progress.Birthday + "\n" if progress.Birthday
-  results += "Height: " + progress.Looks.Height + "m" + " (" + global.$game.constants.player.formatHeight(progress.Looks.Height) + ")" + "\n" if progress.Looks
-  results += "Weight: " + progressm.Looks.Weight
+  if progress.Name then results += "Alias: " + progress.Name.alias + "\n"
+  if progress.Name then results += "First Name: " + progress.Name.firstName + "\n"
+  if progress.Name then results += "Last Name: " + progress.Name.lastName + "\n"
+  if progress?.Name?.middleName then results += "Middle Name: " + progress.Name.middleName + "\n"
+  if progress.Sex then results += "Sex: " + progress.Sex + "\n"
+  if progress.Birthday then results += "Birthday: " + progress.Birthday.format("dddd, MMMM Do, YYYY") + "\n"
+  if progress.Appearance then results += "Height: " + progress.Appearance.height + " meters" + " (" + global.$game.constants.player.formatHeight(progress.Appearance.height) + ")" + "\n"
+  if progress.Appearance then results += "Weight: " + progress.Appearance.weight + "kg (#{global.$game.constants.player.formatWeight(progress.Appearance.weight, progress.Appearance.height)} for your height)\n"
+  if progress.Appearance then results += "Eyes: " + progress.Appearance.eyeStyle + " " + progress.Appearance.eyeColor + " eyes\n"
+  if progress.Appearance then results += "Hair: " + progress.Appearance.hairCut + " " + progress.Appearance.hairColor + " " + progress.Appearance.hairStyle + "\n"
+
+  return results
 
 user.charGen.Name = (socket, callback)->
   namePrompt = """
@@ -111,14 +132,14 @@ This can be their first name, last name, or a nick name that they're always call
     existingPlayers = _(global.$game.$index.players).find (player) ->
       player.name.toLowerCase() == criteria
     if existingPlayers then return "That name is taken."
-  , (alias) ->
+  , (err, alias) ->
     global.$game.common.question socket, "Ok. What is their real first name from birth?\n", (criteria)->
       return "Please enter their first name from birth." if criteria.trim().length < 2
-    , (firstName)->
+    , (err, firstName)->
       global.$game.common.question socket, "Now please enter your last name, or the last name of the mother at birth?\n", (criteria)->
         return "Please enter their last name from birth." if criteria.trim().length < 2
-      , (lastName)->
-        global.$game.common.question socket, "And if they have a middle name, please enter it now, otherwise leave it blank.\n", (middleName)->
+      , (err, lastName)->
+        global.$game.common.question socket, "And if they have a middle name, please enter it now, otherwise leave it blank.\n", null, (err, middleName)->
           callback
             alias:alias
             firstName:firstName
@@ -131,39 +152,40 @@ user.charGen.Sex = (socket, callback)->
 What is your characters #{'sex'.bold}
 (We're going to keep it simple here, although we do understand sometimes the reality can be a little more complex.)
 [M]ale
-[F]emale
+[F]emale\n
 """
   q socket, sexPrompt, (sex)->
     return "Please, let's keep this straight forward." if not sex.toLowerCase().startsWith("m") and not sex.toLowerCase().startsWith("f")
-  , (sex) ->
+  , (err, sex) ->
     sex = if sex.toLowerCase().startsWith("m") then "male" else "female"
     callback(sex)
 
-user.charGen.Looks = (socket, callback) ->
+user.charGen.Appearance = (socket, callback) ->
   q = global.$game.common.question
   heightPrompt = """
 What is the #{'height'.bold} of your character? Please answer in meters, between 0.5 and 3.
-For example, if your character was 1.8 meters (about 6 feet tall), you would type: 1.8
+For example, if your character was 1.8 meters (about 6 feet tall), you would type: 1.8\n
 """
   q socket, heightPrompt, (height) ->
     return "Please enter a number between 0.5 and 3, like 1.8." if isNaN(height) || height < 0.5|| height > 3
-  , (height) ->
-    height = Math.floor(parseFloat(height) * 1000) / 1000
-    $game.common.choice socket, "That would make you #{global.$game.constants.player.formatHeight(height)}. And your weight in kilograms?", (criteria)->
+  , (err, height) ->
+    height = Math.floor(height * 1000) / 1000
+    q socket, "That would make you #{global.$game.constants.player.formatHeight(height)}. And your weight in kilograms?\n", (criteria)->
       return "Please enter a number between 15 and 300." if isNaN(parseInt(criteria)) || parseInt(criteria) < 15 || parseInt(criteria) > 300
-    , (weight)->
+    , (err, weight)->
       weight = parseInt(weight)
-      $game.common.choice socket, "What would you like your #{'hair cut'.bold} to be?", global.$game.constants.player.hairCut, (hairCut)->
-        $game.common.choice socket, "And the #{'hair style'.bold} to go with your #{hairCut} hair?", global.$game.constants.player.hairStyle, (hairStyle)->
-          $game.common.choice socket, "And is the #{'hair color'.bold} of your #{hairCut} #{hairStyle} hair?", global.$game.constants.player.hairColor, (hairColor)->
-            $game.common.choice socket, "Fine. You have #{hairCut} #{hairColor} #{hairStyle} hair.\nWhat is your #{'eye color'.bold}?", global.$game.constants.player.eyeColor, (eyeColor)->
-              $game.common.choice socket, "Ok, and the #{'eye style'.bold} of these #{eyeColor} eyes?", global.$game.constants.player.eyeStyle, (eyeStyle)->
-                $game.common.choice socket, "Perfect. You've got #{eyeStyle} #{eyeColor} eyes. Let's talk about your #{'skin'.bold}. How would you describe it?", global.$game.constants.player.skinStyle, (skinStyle)->
-                  $game.common.choice socket, "Great. And what's the #{'skin color'.bold} of your #{skinStyle}?", global.$game.constants.player.skinColor, (skinColor)->
+      global.$game.common.choice socket, "That would make you #{global.$game.constants.player.formatWeight(weight, height)} for your size. What would you like your #{'hair cut'.bold} to be?", global.$game.constants.player.hairCut, (err, hairCut)->
+        global.$game.common.choice socket, "And the #{'hair style'.bold} to go with your #{hairCut} hair?", global.$game.constants.player.hairStyle, (err, hairStyle)->
+          global.$game.common.choice socket, "And is the #{'hair color'.bold} of your #{hairCut} #{hairStyle} hair?", global.$game.constants.player.hairColor, (err, hairColor)->
+            global.$game.common.choice socket, "Fine. You have #{hairCut} #{hairColor} #{hairStyle} hair.\nWhat is your #{'eye color'.bold}?", global.$game.constants.player.eyeColor, (err, eyeColor)->
+              global.$game.common.choice socket, "Ok, and the #{'eye style'.bold} of these #{eyeColor} eyes?", global.$game.constants.player.eyeStyle, (err, eyeStyle)->
+                global.$game.common.choice socket, "Perfect. You've got #{eyeStyle} #{eyeColor} eyes. Let's talk about your #{'skin'.bold}. How would you describe it?", global.$game.constants.player.skinStyle, (err, skinStyle)->
+                  global.$game.common.choice socket, "Great. And what's the #{'skin color'.bold} of your #{skinStyle}?", global.$game.constants.player.skinColor, (err, skinColor)->
                     callback
                       height:height,
                       weight:weight,
                       hairCut:hairCut,
+                      hairColor:hairColor,
                       hairStyle:hairStyle,
                       eyeColor:eyeColor,
                       eyeStyle:eyeStyle,

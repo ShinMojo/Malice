@@ -29,6 +29,7 @@
     "node-uuid": "^1.4.3",
     "nodemailer": "^1.4.0",
     "nodemon": "^1.5.0",
+    "q": "^1.4.1",
     "telnet": "0.0.1",
     "underscore": "^1.8.3",
     "watchr": "^2.4.13",

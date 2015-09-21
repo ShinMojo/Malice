@@ -35,7 +35,7 @@ global.$game.common.login.loginLoop = (socket) ->
   socket.tell("Please login with your user name, character name or email address.")
   socket.tell("If you don't have a user, please type " + "register".underline.bold + " to create a one.")
   socket.tell("One account per person, please.".bold)
-  socket.tell("If you require any assistance please email "+ "shinmojo@gmail.com".bold + ".")
+  socket.tell("If you require any assistance please email " + "shinmojo@gmail.com".underline.bold + ".")
   rl.question loginPrompt, (login)->
     console.log login
     if(login == "register")
@@ -68,7 +68,7 @@ global.$game.common.login.loginLoop = (socket) ->
       if not user.verified
         global.$game.common.question socket, "Please enter your confirmation code: ", (check) ->
           return "Invalid confirmation code." if check.toLowerCase() != user.confirmationCode.toLowerCase()
-        , (answer) ->
+        , (err, answer) ->
           user.verified = true
           socket.tell("Successfully authenticated as " + login + ". Welcome back!")
           global.$driver.authenticatedUsers[user] = socket
@@ -95,7 +95,7 @@ global.$game.common.login.register = (socket) ->
       socket.tell("Great. Just one more thing. We need a valid email in case you ever lose your password. " + "We absolutely promise on a stack of Ono-Sendai Cyberspace 7's that we will only ever use it for VERY infrequent game related communication.".bold)
       global.$game.common.question socket, "Please enter your email: ", (email) ->
         if not global.$game.common.login.validateEmail(email) then return "Invalid email address."
-      , (validEmail) ->
+      , (err, validEmail) ->
         socket.tell("Perfect! We've created a user for you with the user name " + username.bold + " and sent an email to " + validEmail.bold + " with your confirmation code.\n Now we need you to login with the username you just used, and type in the confirmation code from your email. If you run into any problems, please email shinmojo@gmail.com")
         user = new global.$game.classes.User(username, validEmail, password, socket.remoteAddress)
         code = global.$game.common.login.createConfirmationCode()
@@ -134,10 +134,8 @@ global.$game.common.login.sendEmail = (username, email, confirmationCode) ->
 global.$game.common.login.getPassword = (socket, callback) ->
   global.$game.common.question socket, "Please enter your password (8 characters minimum): ", (answer) ->
     return "Password must be 8 or more characters." if answer.trim().length < 8
-  , (password)->
-    global.$game.common.question socket, "Please enter your password again: ", (again) ->
-      return false
-    , (again) ->
+  , (err, password)->
+    global.$game.common.question socket, "Please enter your password again: ", null, (err, again) ->
       if(again != password)
         socket.tell("Your passwords did not match. Try again.")
         return setTimeout global.$game.common.login.getPassword socket, callback
@@ -159,7 +157,7 @@ global.$game.common.login.getUserName = (socket, callback) ->
     if answer.length < 3 then return "User names must be 3 or more characters."
     if not /^[a-zA-Z0-9]*$/.test(answer) then return "User names cannot contain any non alphanumeric characters."
     return false
-  , (answer) ->
+  , (err, answer) ->
     callback(answer)
 
 global.$game.common.login.repl = (socket) ->
