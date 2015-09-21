@@ -171,7 +171,9 @@ What is your characters #{'sex'.bold}
 
 user.charGen.Appearance = (socket, callback) ->
   socket.tell("In The City of Malice, appearances matter. Your health starts with your nutrition, which is a requirement of your weight and height: big people need more food.")
-  socket.tell("It's also true that bigger people have a advantage over smaller people, but at the cost of increased nutritional requirements. If you choose to start big, you'll need to do things like eat more often if you want to stay big. In addition, the taller you are, the more weight you'll need to be 'big'.")
+  socket.tell("Big people have increased nutritional requirements. If you choose to start big, you'll need to do things like eat more often if you want to stay big. In addition, the taller you are, the more weight you'll need to be 'big'.")
+  socket.tell("There's advantages and disadvantages to both: Heavier people can throw their weight and are naturally stronger and more intimidating. Taller people can reach things that short people can't. Thin people fit in places that tall and large people won't, and are naturally faster.")
+  socket.tell("Of course, average people are more socially acceptable, and gain charisma for maintaining a social ideal.")
   socket.tell("The 'average' weight and height for people is about 1.7 meters and 75 kilograms (or about 6 foot tall and 180 pounds). Deviation from that is at your own peril.")
   q = global.$game.common.question
   heightPrompt = """
