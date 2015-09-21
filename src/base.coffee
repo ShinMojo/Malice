@@ -33,7 +33,7 @@ global.$game.common.yesorno = (socket, prompt, callback)->
   global.$game.common.question socket, prompt, (criteria)->
     return "Please answer yes or no." if not criteria.toLowerCase().startsWith("y") && not criteria.toLowerCase().startsWith("n")
   , (err, answer)->
-    if answer.toLowerCase().startsWith("y") then deferred.resolve("Yes") else deferred.reject("No")
+    if answer.toLowerCase().startsWith("y") then deferred.resolve("yes") else deferred.reject("no")
   return deferred.promise.nodeify(callback)
 
 global.$game.common.choice = (socket, prompt, choices, callback) ->

@@ -77,7 +77,6 @@ user.makeNewPlayer = (socket)->
     global.$game.common.choice socket, prompt, options, (err, option)->
       if option == "Abort" then return global.$game.classes.User.prototype.handleConnection(socket)
       if option == "Finish"
-        console.log("finish")
         socket.tell("This is how you're character is going to start:")
         socket.tell global.$game.classes.User.prototype.charGen.formatProgress(results)
         socket.tell "Now they may not be like that forever, but it may take a little doing to make changes after this."
@@ -171,6 +170,9 @@ What is your characters #{'sex'.bold}
     callback(sex)
 
 user.charGen.Appearance = (socket, callback) ->
+  socket.tell("In The City of Malice, appearances matter. Your health starts with your nutrition, which is a requirement of your weight and height: big people need more food.")
+  socket.tell("It's also true that bigger people have a advantage over smaller people, but at the cost of increased nutritional requirements. If you choose to start big, you'll need to do things like eat more often if you want to stay big. In addition, the taller you are, the more weight you'll need to be 'big'.")
+  socket.tell("The 'average' weight and height for people is about 1.7 meters and 75 kilograms (or about 6 foot tall and 180 pounds). Deviation from that is at your own peril.")
   q = global.$game.common.question
   heightPrompt = """
 What is the #{'height'.bold} of your character? Please answer in meters, between 0.5 and 3.
@@ -184,7 +186,7 @@ For example, if your character was 1.8 meters (about 6 feet tall), you would typ
       return "Please enter a number between 15 and 300." if isNaN(parseInt(criteria)) || parseInt(criteria) < 15 || parseInt(criteria) > 300
     , (err, weight)->
       weight = parseInt(weight)
-      global.$game.common.choice socket, "That would make you #{global.$game.constants.player.formatWeight(weight, height)} for your size. What would you like your #{'hair cut'.bold} to be?", global.$game.constants.player.hairCut, (err, hairCut)->
+      global.$game.common.choice socket, "That would make you #{global.$game.constants.player.formatWeight(weight, height)} for your height. What would you like your #{'hair cut'.bold} to be?", global.$game.constants.player.hairCut, (err, hairCut)->
         global.$game.common.choice socket, "And the #{'hair style'.bold} to go with your #{hairCut} hair?", global.$game.constants.player.hairStyle, (err, hairStyle)->
           global.$game.common.choice socket, "And is the #{'hair color'.bold} of your #{hairCut} #{hairStyle} hair?", global.$game.constants.player.hairColor, (err, hairColor)->
             global.$game.common.choice socket, "Fine. You have #{hairCut} #{hairColor} #{hairStyle} hair.\nWhat is your #{'eye color'.bold}?", global.$game.constants.player.eyeColor, (err, eyeColor)->
