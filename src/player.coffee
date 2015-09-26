@@ -8,10 +8,9 @@ global.$game.constants.player = {} if not global.$game.constants.player
 pc = global.$game.constants.player
 
 pc.maxHeight = 3
-pc.maxStat = 100
-pc.maxStatOver = 125
-pc.weight = ["emaciated", "anorexic", "starving", "sickley", "thin", "under-weight", "lean", "fit", "average", "a little thick", "big-boned", "flabby", "thick", "over-weight", "chubby", "portly", "fluffy", "fat", "obese", "massive", "a small planet"]
-pc.height = ["non-existent", "microscopic", "itty-bitty", "dwarf-sized", "tiny", "diminutive", "petite", "puny", "very short", "short", "average", "slightly tall", "sizable", "pretty tall", "tall", "very tall", "extremely tall", "incredibly tall", "giant", "sky-scraping"]
+pc.maxWeight = 300
+pc.weight = ["emaciated", "anorexic", "starving", "sickley", "under-weight", "skinny", "thin", "lean", "fit", "proportionate","of average weight" "a little thick", "big-boned", "flabby", "thick", "over-weight", "chubby", "portly", "fluffy", "fat", "obese", "massive", "a small planet"]
+pc.height = ["non-existent", "microscopic", "itty-bitty", "dwarf-sized", "tiny", "diminutive", "petite", "puny", "very short", "short", "of average height", "slightly tall", "sizable", "pretty tall", "tall", "very tall", "extremely tall", "incredibly tall", "giant", "sky-scraping"]
 pc.hairCut = ["bald", "balding", "cropped", "crew-cut", "buzzed", "flat-top", "mohawk", "bihawk", "fauxhawk", "devil lock", "shaved", "under-cut", "faded", "long", "shoulder-length", "layered",  "business", "comb-over", "plugged", "uneven", "bobed", "pixied"]
 pc.hairStyle = ["curly", "pig-tails", "pony-tails", "straight", "wavy", "crimped", "messy", "permed", "dreaded", "unkempt", "neat", "tousled", "greasy", "gnarled", "french-twisted", "bun-curled", "spikey", "uncombed", "lifeless", "bouncy", "sparkly"]
 pc.hairColor = ["black", "brown", "light brown", "dark brown", "blonde", "dirty blonde", "strawberry blonde", "auburn", "red", "ginger", "blue", "green", "purple", "pink", "orange", "burgundy", "indigo", "violet", "gray", "white", "platinum", "silver"]
@@ -19,6 +18,8 @@ pc.eyeColor = ["black", "blue", "red", "green", "emerald", "hazel", "brown", "ye
 pc.eyeStyle = ["hooded", "blood-shot", "squinty", "round", "wide", "big", "small", "slanty", "scarred", "swollen", "puffy", "dark-rimmed", "bulging", "shifty", "doey", "aggressive", "submissive", "assertive", "defiant"]
 pc.skinStyle = ["scarred", "porcelain", "flawless", "smooth", "rough", "sickly", "pasty", "sweaty", "smelly", "flaking", "calloused", "tattooed", "branded", "soft", "furry", "hairy", "hairless", "bruised", "vainy", "acne-ridden", "thin"]
 pc.skinColor = ["albino", "ivory", "pale", "white", "tan", "peach", "olive", "jaundiced", "mocha", "rosy", "brown", "dark", "black", "green", "orange", "grey", "ashen", "sun-burnt", "red"]
+pc.language = ["English", "Spanish", "French", "Chinese", "Japanese", "Korean", "Tagalog", "MixMash", "Hindi", "Arabic", "Portuguese", "German", "Russian"]
+pc.nationality = ["Caucasian", "Latino", "French", "Chinese", "Japanese", "Korean", "Indian", "Native American", "German", "Russian"]
 pc.stats = {} if not pc.stats
 pc.stats.strengh = ["handicapped", "anemic", "feeble", "frail", "delicate", "weak", "average", "fit", "athletic", "strong", "beefy", "muscular", "built", "tank", "super-human", "god-like"]
 pc.stats.endurance = ["cadaverous", "wasted", "pathetic", "quickly spent", "sub-standard", "medicore", "sufficient", "reasonable", "above par", "healthy", "sound", "robust", "vigorous", "energetic", "powerful", "machine-like", "nuclear", "eternal"]
@@ -33,7 +34,7 @@ pc.formatHeight = (height)->
   console.log(global.$game.constants.player.height.proportionate)
   global.$game.constants.player.height.proportionate(height, global.$game.constants.player.maxHeight)
 
-pc.formatWeight = (weight, height = 1.8)->
+pc.formatWeight = (weight, height = 1.7)->
   return global.$game.constants.player.weight.proportionate(weight, 100 * height)
 
 if not global.$game.classes.Player
@@ -44,13 +45,16 @@ if not global.$game.classes.Player
 
 player = global.$game.classes.Player.prototype
 
-player.init = (@name, @user, @location = global.$game.$index.rooms.$nowhere) ->
+player.init = (@name, @user, @info, @location = global.$game.$index.rooms.$nowhere) ->
   throw new Error("Player names must be unique.") if global.$game.$index.players[@name]
   throw new Error("Player must be associated with a user.") if not @user
   global.$game.$index.players[@name] = this
   @salt = require("node-uuid").v4()
   @user.player = this
-  @info = {}
+  @contents = []
+  @wearing = {}
+  @descirption = "Someone who needs a better description."
+  @doing = ""
 
 player.moveTo = global.$game.common.moveTo
 
@@ -64,13 +68,85 @@ player.getSex = ->
   @info.sex || "female"
 
 player.getHeight = ->
-  @info.height || 1.8
+  @info.height || 1.7
 
 player.getWeight = ->
   @info.weight || 80
 
 player.getHeightString = ->
-  return global.$game.constants.player.formatHeight @info?.appearance?.height || 0
+  return global.$game.constants.player.formatHeight @info?.appearance?.height || 1.7
 
 player.getWeightString = ->
-  return global.$game.constants.player.formatWeight @info?.appearance?.weight || 80, @info?.appearance?.height || 1.8
+  return global.$game.constants.player.formatWeight @info?.appearance?.weight || 80, @getHeight()
+
+player.getSocket = ->
+  @user.getSocket()
+
+player.isConnected = ->
+  @user.isConnected()
+
+player.goIC = () ->
+  @commandLoop()
+
+player.commandLoop = ->
+  if not @isConnected() then return console.log("Not connected")
+  command = global.$game.common.question @getSocket(), ""
+  self = this
+  command.then (input)->
+    try
+      self.getInputHandler()(input)
+    catch(err)
+      console.log(err, err.stack.split("\n"))
+    self.commandLoop()
+  command.done()
+
+player.getInputHandler = ->
+  self = this
+  return global.$driver.getInputHandler(self) || (input)->
+    console.log("4")
+    cmdArgs = input.split(" ")
+    command = cmdArgs.shift()
+    commands = self.getCommands(self)
+    console.log(commands)
+    starts = matches = undefined
+    for key, value of commands
+      console.log(command)
+      if key == command
+        matches = value
+        break
+      if key.startsWith(command) and not starts
+        starts = value
+    toDo = matches || starts
+    try
+      if toDo then toDo(self, cmdArgs) else self.tell("I don't understand that.")
+
+player.setInputHandler = (handler) ->
+  global.$game.$driver.setInputHandler(this, handler)
+
+player.clearInputHandler = ->
+  global.$game.$driver.clearInputHandler(this)
+
+
+player.getCommands = (who)->
+  [
+    {
+      name:"look"
+      tests:[
+        /l(ook)?$/i
+        /^look\sat\s(.+)$/i
+      ]
+      func:global.$game.classes.Player.prototype.look
+    }
+  ]
+
+
+player.look
+  self = this
+  "look": ->
+    self.lookAt(self.location)
+
+
+
+
+
+

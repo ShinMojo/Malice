@@ -39,13 +39,19 @@ global.$game.common.yesorno = (socket, prompt, callback)->
 global.$game.common.choice = (socket, prompt, choices, callback) ->
   deferred = require("q").defer()
   what = prompt + "\n"
-  choices.forEach (value, key)->
-    what += "[" + (key + 1) + "] " + value + "\n"
+  index = 1
+  map = {}
+  for key, value of choices
+    if not choices.hasOwnProperty(key) then continue
+    what += " [" + (index).toString().bold + "] " + value + "\n"
+    map[index] = key
+    index++
+  index--
   global.$game.common.question socket, what, (answer)->
-    return "Please enter a number between 1 and #{choices.length} or " + "@abort".underline + " to abort." if isNaN(parseInt(answer)) || parseInt(answer) < 1 || parseInt(answer) > choices.length
+    return "Please enter a number between 1 and #{index} or " + "@abort".underline + " to abort." if isNaN(parseInt(answer)) || parseInt(answer) < 1 || parseInt(answer) > index
   , (err, finalAnswer) ->
     return deferred.reject("Abort") if err
-    deferred.resolve(choices[parseInt(finalAnswer)-1])
+    deferred.resolve(map[parseInt(finalAnswer)])
   return deferred.promise.nodeify(callback)
 
 global.$game.common.gameTime = ->

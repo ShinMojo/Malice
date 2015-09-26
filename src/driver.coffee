@@ -13,8 +13,19 @@ $driver = global.$driver
 $game = global.$game
 global.$driver.clients = []
 global.$driver.authenticatedUsers = {};
-global.$driver.getSocket = (user)->
+global.$driver.inputHandlers = {};
+
+global.$driver.getSocket = (user) ->
   global.$driver.authenticatedUsers[user]
+
+global.$driver.getInputHandler = (player) ->
+  global.$driver.inputHandlers[player]
+
+global.$driver.setInputHandler = (player, handler) ->
+  global.$driver.inputHandlers[player] = handler
+
+global.$driver.clearInputHandler = (player) ->
+  delete global.$driver.inputHandlers[player]
 
 Array.prototype.remove = ->
   what = undefined
@@ -110,7 +121,7 @@ global.$driver.startDriver = ->
 
 global.$driver.load()
 global.$driver.startDriver()
-global.$game.common.startGame() if global.$game.common.startGame
+global.$game?.common?.startGame() if global.$game?.common?.startGame
 setInterval global.$driver.save, 1000 * 60 * 10
 
 repl.start(

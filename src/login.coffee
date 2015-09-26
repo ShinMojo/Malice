@@ -73,11 +73,18 @@ global.$game.common.login.loginLoop = (socket) ->
           socket.tell("Successfully authenticated as " + login + ". Welcome back!")
           global.$driver.authenticatedUsers[user] = socket
           socket.user = user
-          global.$game.common.login.repl(socket)
+          socket.question = (prompt, criteria, callback)->
+            global.$game.common.question socket, prompt, criteria, callback
+          socket.choice = (prompt, options, callback)->
+            global.$game.common.choice socket, prompt, options, callback
+          socket.yesorno = (prompt, callback)->
+            global.$game.common.yesorno prompt, callback
+          user.handleConnection(socket)
         return
       socket.tell("Successfully authenticated as " + login + ". Welcome back!")
       global.$driver.authenticatedUsers[user] = socket
       socket.user = user
+      user.lastLogin = new Date()
       user.handleConnection(socket)
     )
 
@@ -148,12 +155,12 @@ global.$game.common.login.validateEmail = (email) ->
 global.$game.common.login.getUserName = (socket, callback) ->
   global.$game.common.question socket, "What would you like your user name to be? ", (answer) ->
     _ = require("underscore")
-    if _(global.$game.$index.users).find (user) ->
+    if(_(global.$game.$index.users).find (user) ->
       user.name.toLowerCase() == answer
-    then return "That user name is taken."
-    if _(global.$game.$index.players).find (player) ->
+    ) then return "That user name is taken."
+    if(_(global.$game.$index.players).find (player) ->
       player.name.toLowerCase() == answer
-    then return "That user name is taken."
+    ) then return "That user name is taken."
     if answer.length < 3 then return "User names must be 3 or more characters."
     if not /^[a-zA-Z0-9]*$/.test(answer) then return "User names cannot contain any non alphanumeric characters."
     return false

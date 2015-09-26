@@ -1,3 +1,4 @@
+global.$game.classes = {} if not global.$game.classes
 
 if not global.$game.classes.Room
   global.$game.classes.Room = class Room
