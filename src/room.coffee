@@ -42,3 +42,28 @@ exit.accept = (who)->
   who.tell(@leaveMessage)
   who.moveTo(@destination)
   who.tell(@arriveMessage)
+
+exit.generateTests = ->
+  tests = []
+  names = [@name]
+  names = names.concat aliases
+  names.forEach (name)->
+    nameArr = name.split("")
+    regExp = "^" + nameArr.slice()
+    nameArr.forEach (ch)->
+      rexExp += "(" + ch + ")?"
+    regExp += "$"
+    tests.push new RegExp(regExp, "i")
+  tests
+
+exit.getCommands = (who)->
+  self = this
+  [
+    {
+      name: self.name
+      tests: self.generateTests()
+      func:->
+        self.accept who
+      source:self
+    }
+  ]

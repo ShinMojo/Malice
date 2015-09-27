@@ -5,14 +5,14 @@ charGen = global.$game.common.charGen
 
 charGen.start = (socket)->
   socket.tell("Warning: ".red + "You must complete this process without disconnecting, otherwise you will have to start over.")
-  options = {"name":"Name", "birthday":"Birthday", "sex":"Sex", "nationality":"Nationality", "stats":"Height and Weight", "appearance":"Appearance", "language":"Native Language", "abort":"Abort".red}
-  remaining = ["Name", "Birthday", "Sex", "Nationality", "Height and Weight", "Appearance", "Native Language"]
+  options = {"name":"Name", "birthday":"Birthday", "sex":"Sex", "ethnicity":"Ethnicity", "stats":"Height and Weight", "appearance":"Appearance", "language":"Native Language", "abort":"Abort".red}
+  remaining = ["Name", "Birthday", "Sex", "Ethnicity", "Height and Weight", "Appearance", "Native Language"]
   results = {}
   makePlayerLoop = ->
     if results.name then options.name = "Name".green
     if results.birthday then options.birthday = "Birthday".green
     if results.sex then options.sex = "Sex".green
-    if results.nationality then options.nationality = "Nationality".green
+    if results.ethnicity then options.ethnicity = "Ethnicity".green
     if results.stats then options.stats = "Height and Weight".green
     if results.appearance then options.appearance = "Appearance".green
     if results.language then options.language = "Native Language".green
@@ -21,6 +21,7 @@ charGen.start = (socket)->
     prompt += progress if progress
     prompt += if remaining.length then "Things you still must do before you finish: #{remaining.join(', ').yellow}" else "You're all set. Select ".green + "Finish".green.bold + " to finalize your character.".green
     if remaining.length == 0 && not options.finish then options.finish = "Finish".green.bold
+    console.log(socket.choice)
     socket.choice prompt, options, (err, option)->
       if option == "abort" || err then return socket.user.handleConnection socket
       if option == "finish"
@@ -111,7 +112,7 @@ charGen.formatProgress = (progress)->
   if progress.name then results += "Last Name: " + progress.name.lastName + "\n"
   if progress?.name?.middleName then results += "Middle Name: " + progress.name.middleName + "\n"
   if progress.sex then results += "Sex: " + progress.sex + "\n"
-  if progress.nationality then results += "Nationality: " + progress.nationality + "\n"
+  if progress.ethnicity then results += "Ethnicity: " + progress.ethnicity + "\n"
   if progress.birthday then results += "Birthday: " + moment(progress.birthday).format("dddd, MMMM Do, YYYY") + "\n"
   if progress.stats then results += "Height: " + progress.stats.height + " Meters" + " (" + global.$game.constants.player.formatHeight(progress.stats.height) + ")" + "\n"
   if progress.stats then results += "Weight: " + progress.stats.weight + " Kilograms (#{global.$game.constants.player.formatWeight(progress.stats.weight, progress.stats.height)} for your height)\n"
@@ -138,12 +139,16 @@ charGen.birthday = (socket, callback) ->
     moment = require("moment")
     callback(null, moment(birthday, "MM/DD/YYYY").toDate())
 
-charGen.nationality = (socket, callback) ->
-  socket.choice "What is your nationality?", global.$game.constants.player.nationality, callback
+charGen.ethnicity = (socket, callback) ->
+  socket.choice "What is your ethnicity?", global.$game.constants.player.ethnicity, (err, choice)->
+    return callback(err) if err
+    callback(null, global.$game.constants.player.ethnicity[choice])
 
 charGen.language = (socket, callback) ->
   socket.tell "The game is in English, but your character may be a foreigner, in which case they may not speak the local language. In any case, you can always learn a new language once in the game."
-  socket.choice "What is your primary language?", global.$game.constants.player.language, callback
+  socket.choice "What is your primary language?", global.$game.constants.player.language, (err, result)->
+    return callback(err) if err
+    callback(null, global.$game.constants.player.language[result])
 
 charGen.name = (socket, callback)->
   namePrompt = """

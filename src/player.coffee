@@ -9,7 +9,7 @@ pc = global.$game.constants.player
 
 pc.maxHeight = 3
 pc.maxWeight = 300
-pc.weight = ["emaciated", "anorexic", "starving", "sickley", "under-weight", "skinny", "thin", "lean", "fit", "proportionate","of average weight" "a little thick", "big-boned", "flabby", "thick", "over-weight", "chubby", "portly", "fluffy", "fat", "obese", "massive", "a small planet"]
+pc.weight = ["emaciated", "anorexic", "starving", "sickley", "under-weight", "skinny", "thin", "lean", "fit", "proportionate","of average weight", "a little thick", "big-boned", "flabby", "thick", "over-weight", "chubby", "portly", "fluffy", "fat", "obese", "massive", "a small planet"]
 pc.height = ["non-existent", "microscopic", "itty-bitty", "dwarf-sized", "tiny", "diminutive", "petite", "puny", "very short", "short", "of average height", "slightly tall", "sizable", "pretty tall", "tall", "very tall", "extremely tall", "incredibly tall", "giant", "sky-scraping"]
 pc.hairCut = ["bald", "balding", "cropped", "crew-cut", "buzzed", "flat-top", "mohawk", "bihawk", "fauxhawk", "devil lock", "shaved", "under-cut", "faded", "long", "shoulder-length", "layered",  "business", "comb-over", "plugged", "uneven", "bobed", "pixied"]
 pc.hairStyle = ["curly", "pig-tails", "pony-tails", "straight", "wavy", "crimped", "messy", "permed", "dreaded", "unkempt", "neat", "tousled", "greasy", "gnarled", "french-twisted", "bun-curled", "spikey", "uncombed", "lifeless", "bouncy", "sparkly"]
@@ -19,7 +19,7 @@ pc.eyeStyle = ["hooded", "blood-shot", "squinty", "round", "wide", "big", "small
 pc.skinStyle = ["scarred", "porcelain", "flawless", "smooth", "rough", "sickly", "pasty", "sweaty", "smelly", "flaking", "calloused", "tattooed", "branded", "soft", "furry", "hairy", "hairless", "bruised", "vainy", "acne-ridden", "thin"]
 pc.skinColor = ["albino", "ivory", "pale", "white", "tan", "peach", "olive", "jaundiced", "mocha", "rosy", "brown", "dark", "black", "green", "orange", "grey", "ashen", "sun-burnt", "red"]
 pc.language = ["English", "Spanish", "French", "Chinese", "Japanese", "Korean", "Tagalog", "MixMash", "Hindi", "Arabic", "Portuguese", "German", "Russian"]
-pc.nationality = ["Caucasian", "Latino", "French", "Chinese", "Japanese", "Korean", "Indian", "Native American", "German", "Russian"]
+pc.ethnicity = ["Caucasian", "Latino", "French", "Chinese", "Japanese", "Korean", "Indian", "Native American", "German", "Russian"]
 pc.stats = {} if not pc.stats
 pc.stats.strengh = ["handicapped", "anemic", "feeble", "frail", "delicate", "weak", "average", "fit", "athletic", "strong", "beefy", "muscular", "built", "tank", "super-human", "god-like"]
 pc.stats.endurance = ["cadaverous", "wasted", "pathetic", "quickly spent", "sub-standard", "medicore", "sufficient", "reasonable", "above par", "healthy", "sound", "robust", "vigorous", "energetic", "powerful", "machine-like", "nuclear", "eternal"]
@@ -95,7 +95,7 @@ player.commandLoop = ->
   command.then (input)->
     try
       self.getInputHandler()(input)
-    catch(err)
+    catch err
       console.log(err, err.stack.split("\n"))
     self.commandLoop()
   command.done()
@@ -103,22 +103,9 @@ player.commandLoop = ->
 player.getInputHandler = ->
   self = this
   return global.$driver.getInputHandler(self) || (input)->
-    console.log("4")
     cmdArgs = input.split(" ")
     command = cmdArgs.shift()
-    commands = self.getCommands(self)
-    console.log(commands)
-    starts = matches = undefined
-    for key, value of commands
-      console.log(command)
-      if key == command
-        matches = value
-        break
-      if key.startsWith(command) and not starts
-        starts = value
-    toDo = matches || starts
-    try
-      if toDo then toDo(self, cmdArgs) else self.tell("I don't understand that.")
+    self.handleCommand(command, cmdArgs)
 
 player.setInputHandler = (handler) ->
   global.$game.$driver.setInputHandler(this, handler)
@@ -126,27 +113,44 @@ player.setInputHandler = (handler) ->
 player.clearInputHandler = ->
   global.$game.$driver.clearInputHandler(this)
 
+player.handleCommand = (command, args)->
+  self = this
+  func = @matchCommand(command)
+  return @tell("I don't understand that.") if not func
+  func.func.call(func.source, args)
+
+player.matchCommand = (command)->
+  _ = require("underscore")
+  _(@getCommands()).find (options)->
+    _(options.tests).find (test)->
+      test.test command
+
 
 player.getCommands = (who)->
-  [
+  self = this
+  commands = [
     {
       name:"look"
       tests:[
         /l(ook)?$/i
         /^look\sat\s(.+)$/i
       ]
-      func:global.$game.classes.Player.prototype.look
+      func:self.look
+      source:self
     }
   ]
+  commands = commands.concat(@location?.getCommands()) if @location.getCommands
+  commands
 
 
-player.look
-  self = this
-  "look": ->
-    self.lookAt(self.location)
+player.sees = (what)->
+  if not @blind
+    @tell what
 
+player.look = (args)->
+  @lookAt(@location)
 
-
-
+player.lookAt = (what) ->
+  @sees(what.description)
 
 

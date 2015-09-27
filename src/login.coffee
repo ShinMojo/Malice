@@ -73,12 +73,6 @@ global.$game.common.login.loginLoop = (socket) ->
           socket.tell("Successfully authenticated as " + login + ". Welcome back!")
           global.$driver.authenticatedUsers[user] = socket
           socket.user = user
-          socket.question = (prompt, criteria, callback)->
-            global.$game.common.question socket, prompt, criteria, callback
-          socket.choice = (prompt, options, callback)->
-            global.$game.common.choice socket, prompt, options, callback
-          socket.yesorno = (prompt, callback)->
-            global.$game.common.yesorno prompt, callback
           user.handleConnection(socket)
         return
       socket.tell("Successfully authenticated as " + login + ". Welcome back!")

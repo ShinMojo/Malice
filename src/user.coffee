@@ -28,6 +28,12 @@ user.tell = (what) ->
   global.$driver.getSocket(this)?.tell(what)
 
 user.handleConnection = (socket) ->
+  socket.question = (prompt, criteria, callback)->
+    global.$game.common.question socket, prompt, criteria, callback
+  socket.choice = (prompt, options, callback)->
+    global.$game.common.choice socket, prompt, options, callback
+  socket.yesorno = (prompt, callback)->
+    global.$game.common.yesorno prompt, callback
   choices = []
   if not socket.user.player
     prompt = """
@@ -43,7 +49,7 @@ Please make a selection from the following options:
 2. Quit
 
 """
-  global.$game.common.question socket, prompt, (answer) ->
+  socket.question prompt, (answer) ->
     return "Invalid selection." if answer.trim() != "1" && answer.trim() != "2"
   , (err, answer)->
     if(answer == "2")
