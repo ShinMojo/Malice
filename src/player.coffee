@@ -29,7 +29,6 @@ pc.stats.intelligence = ["brain-dead", "dim-witted", "stupid", "ignorant", "dull
 pc.stats.agility = ["useless", "sloth-like", "slow", "delayed", "adequate", "dexterous", "agile", "deft", "nimble", "quick", "cat-like", "fast", "ninja", "speeding bullet", "light-speed"]
 pc.stats.luck = ["non-existant", "doomed", "terrible", "unfortunate", "not the best", "not an issue", "better than some", "better than most", "uncanny", "great", "charmed", "on a streak", "unstoppable", "favored by deities", "so good you can't possibly go wrong"]
 
-
 pc.formatHeight = (height)->
   console.log(global.$game.constants.player.height.proportionate)
   global.$game.constants.player.height.proportionate(height, global.$game.constants.player.maxHeight)
@@ -53,7 +52,7 @@ player.init = (@name, @user, @info, @location = global.$game.$index.rooms.$nowhe
   @user.player = this
   @contents = []
   @wearing = {}
-  @descirption = "Someone who needs a better description."
+  @description = "Someone who needs a better description."
   @doing = ""
 
 player.moveTo = global.$game.common.moveTo
@@ -65,7 +64,7 @@ player.walkThrough = (exit) ->
   exit.accept(this)
 
 player.getSex = ->
-  @info.sex || "female"
+  @info.sex || "neuter"
 
 player.getHeight = ->
   @info.height || 1.7
@@ -135,7 +134,6 @@ player.matchCommand = (command)->
     _(options.tests).find (test)->
       test.regexp.test command
 
-
 player.getCommands = (who)->
   self = this
   commands = [
@@ -164,13 +162,12 @@ player.getCommands = (who)->
   commands = commands.concat(@location?.getCommands(who)) if @location.getCommands
   commands
 
-
 player.sees = (what)->
   if not @blind
     @tell what
 
-player.look = (args)->
-  @sees(if @location.getDescription then @location?.getDescription(this) else @location.description)
+player.look = ()->
+  @sees(if @location.asSeenBy then @location?.asSeenBy(this) else @location.description)
 
 player.lookAt = (who, what) ->
   return @tell("You're blind.") if @blind
@@ -191,7 +188,7 @@ player.resolve = (what) ->
       regexp.test(alias)
   return found[0] if found and found.length == 1
   return found if found.length > 1
-  groups = /^([\w-]+)\s(.*)$/i.exec(what)
+  groups = /^([\w-]+)\s(.*)$/i.exec what
   return undefined if not groups
   ordinal = require("./dist/ordinal.js")
   position = ordinal(groups[1])

@@ -17,7 +17,18 @@ room.init = (@name, @description, @aliases = [], @contents = [], location = glob
   @exits = []
 
 room.asSeenBy = (who)->
-  return @description
+  result = @name[@color || "strip"] + "\n"
+  result += @description + "\n\n"
+  _ = require("underscore")
+
+  result += "You can go " + require("listify")(_(@exits).map((exit)->
+    rest = exit.name.split("")
+    first = rest[0]
+    rest.splice(0,1)
+    rest = rest.join("")
+    "(" + first.bold + ")" + rest
+  )) + "."
+
 
 room.getCommands = (who)->
   _ = require("underscore")
@@ -48,6 +59,7 @@ exit.accept = (who)->
   who.tell(@leaveMessage)
   who.moveTo(@destination)
   who.tell(@arriveMessage)
+  who.look()
 
 exit.generateTests = ->
   tests = []
