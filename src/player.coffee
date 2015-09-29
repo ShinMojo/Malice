@@ -103,9 +103,7 @@ player.commandLoop = ->
 player.getInputHandler = ->
   self = this
   return global.$driver.getInputHandler(self) || (input)->
-    cmdArgs = input.split(" ")
-    command = cmdArgs.shift()
-    self.handleCommand(command, cmdArgs)
+    self.handleCommand(input)
 
 player.setInputHandler = (handler) ->
   global.$game.$driver.setInputHandler(this, handler)
@@ -113,33 +111,57 @@ player.setInputHandler = (handler) ->
 player.clearInputHandler = ->
   global.$game.$driver.clearInputHandler(this)
 
-player.handleCommand = (command, args)->
+player.handleCommand = (command)->
   self = this
   func = @matchCommand(command)
   return @tell("I don't understand that.") if not func
-  func.func.call(func.source, args)
+  _ = require("underscore")
+  test = _(func.tests).find (test)->
+    test.regexp.test command
+  args = [self]
+  groups = test.regexp.exec(command)
+  if test.position
+    if test.position > -1
+      args.push groups[test.position]
+    else
+      test.position.forEach (item)->
+        args.push groups[item]
+  func.func.apply(func.source, args)
 
 player.matchCommand = (command)->
   _ = require("underscore")
-  _(@getCommands()).find (options)->
+  self = this
+  _(@getCommands(self)).find (options)->
     _(options.tests).find (test)->
-      test.test command
+      test.regexp.test command
 
 
 player.getCommands = (who)->
   self = this
   commands = [
     {
-      name:"look"
+      name:"l~ook"
       tests:[
-        /l(ook)?$/i
-        /^look\sat\s(.+)$/i
+        regexp:/l(ook)?$/i
       ]
+      description:"Describes the room you're presently in."
       func:self.look
+      source:self
+    },
+    {
+      name:"l~ook [at/in] <something>"
+      tests:[
+        {
+          regexp:/^l(ook)?\s(at\s|in\s)?(.+)$/i
+          position:3
+        }
+      ]
+      description:"Describes a specific item in more detail."
+      func:self.lookAt
       source:self
     }
   ]
-  commands = commands.concat(@location?.getCommands()) if @location.getCommands
+  commands = commands.concat(@location?.getCommands(who)) if @location.getCommands
   commands
 
 
@@ -148,9 +170,38 @@ player.sees = (what)->
     @tell what
 
 player.look = (args)->
-  @lookAt(@location)
+  @sees(if @location.getDescription then @location?.getDescription(this) else @location.description)
 
-player.lookAt = (what) ->
+player.lookAt = (who, what) ->
+  return @tell("You're blind.") if @blind
+  what = @resolve(what)
+  return @tell("I don't see that here.") if not what
   @sees(what.description)
+
+player.resolve = (what) ->
+  what = what.trim().toLowerCase()
+  return this if what == "me"
+  contents = []
+  contents = contents.concat(@contents)
+  contents = contents.concat(@location.contents)
+  regexp = new RegExp("^(" + what + ")(.*)$", "i")
+  _ = require("underscore")
+  found = _(contents).filter (item)->
+    regexp.test(item?.name) || _(item?.aliases).find (alias)->
+      regexp.test(alias)
+  return found[0] if found and found.length == 1
+  return found if found.length > 1
+  groups = /^([\w-]+)\s(.*)$/i.exec(what)
+  return undefined if not groups
+  ordinal = require("./dist/ordinal.js")
+  position = ordinal(groups[1])
+  rest = groups[2]
+  regexp = new RegExp("^(" + rest + ")(.*)$", "i")
+  found = _(contents).filter (item)->
+    regexp.test(item?.name) || _(item?.aliases).find (alias)->
+      regexp.test(alias)
+  return found[position-1] if found.length > 0 and position > 0 and found.length > position-1
+  return undefined if found.length == 0
+  found
 
 

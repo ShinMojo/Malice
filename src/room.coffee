@@ -19,12 +19,18 @@ room.init = (@name, @description, @aliases = [], @contents = [], location = glob
 room.asSeenBy = (who)->
   return @description
 
+room.getCommands = (who)->
+  _ = require("underscore")
+  _(@exits).chain().map((exit)->
+    exit.getCommands(who)
+  ).flatten(true).value()
+
 if not global.$game.$index.rooms.$nowhere
   new global.$game.classes.Room("$nowhere", "Nowhere. Literally. The place where things go when they are not in the game.")
 
 global.$game.$index.roomExits = {} if !global.$game.$index.roomExits
 
-if not global.$game.RoomExit
+if not global.$game.classes.RoomExit
   global.$game.classes.RoomExit = class RoomExit
     constructor:->
       @type = "$game.classes.RoomExit"
@@ -46,14 +52,15 @@ exit.accept = (who)->
 exit.generateTests = ->
   tests = []
   names = [@name]
-  names = names.concat aliases
+  names = names.concat @aliases
   names.forEach (name)->
     nameArr = name.split("")
-    regExp = "^" + nameArr.slice()
+    regExp = "^" + nameArr.shift()
     nameArr.forEach (ch)->
-      rexExp += "(" + ch + ")?"
+      regExp += "(" + ch + ")?"
     regExp += "$"
-    tests.push new RegExp(regExp, "i")
+    tests.push
+      regexp:new RegExp(regExp, "i")
   tests
 
 exit.getCommands = (who)->
@@ -63,7 +70,7 @@ exit.getCommands = (who)->
       name: self.name
       tests: self.generateTests()
       func:->
-        self.accept who
+        self.accept(who)
       source:self
     }
   ]
