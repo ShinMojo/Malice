@@ -50,12 +50,11 @@ player.init = (@name, @user, @info, @location = global.$game.$index.rooms.$nowhe
   global.$game.$index.players[@name] = this
   @salt = require("node-uuid").v4()
   @user.player = this
-  @contents = []
-  @wearing = {}
   @description = "Someone who needs a better description."
   @doing = ""
 
-player.moveTo = global.$game.common.moveTo
+player.moveTo = ->
+  global.$game.common.moveTo.apply(this, arguments)
 
 player.tell = (what)->
   @user.tell(what);
@@ -70,13 +69,23 @@ player.getHeight = ->
   @info.height || 1.7
 
 player.getWeight = ->
-  @info.weight || 80
+  @info.weight || 75
 
 player.getHeightString = ->
   return global.$game.constants.player.formatHeight @info?.appearance?.height || 1.7
 
 player.getWeightString = ->
   return global.$game.constants.player.formatWeight @info?.appearance?.weight || 80, @getHeight()
+
+player.hold = (what)->
+  return @tell("That's not something that can be held.") if what.cantBeHeld
+  return @tell("You'll need both hands free for that.") if what.twoHanded && (@leftHand || @rightHand)
+  if what.twoHanded
+    @leftHand = @rightHand = what
+    hands = "both hands"
+  if(!@rightHand)
+    return @tell("You're now holding the #{what.description} in your right hand")
+  if(!@right)
 
 player.getSocket = ->
   @user.getSocket()
@@ -150,7 +159,7 @@ player.getCommands = (who)->
       name:"l~ook [at/in] <something>"
       tests:[
         {
-          regexp:/^l(ook)?\s(at\s|in\s)?(.+)$/i
+          regexp:/^l(ook)?\s(at\s|in\s|the\s)*(.+)$/i
           position:3
         }
       ]
@@ -170,19 +179,26 @@ player.look = ()->
   @sees(if @location.asSeenBy then @location?.asSeenBy(this) else @location.description)
 
 player.lookAt = (who, what) ->
+  listify = require("listify")
   return @tell("You're blind.") if @blind
   what = @resolve(what)
   return @tell("I don't see that here.") if not what
-  @sees(what.description)
+  return @tell("Did you mean the " + listify(_(what).map((item)->
+    item.name
+  ), {finalWord:"or"})) if what?.length and what.length > 0
+  @sees(if what.asSeenBy then what.asSeenBy(who) else what.description)
 
-player.resolve = (what) ->
-  what = what.trim().toLowerCase()
-  return this if what == "me"
+player.resolveAllContents = ->
   contents = []
   contents = contents.concat(@contents)
   contents = contents.concat(@location.contents)
-  regexp = new RegExp("^(" + what + ")(.*)$", "i")
+
+player.resolve = (what) ->
   _ = require("underscore")
+  what = what.trim().toLowerCase()
+  return this if what == "me"
+  return @location if what == "here"
+  contents = @resolveAllContents()
   found = _(contents).filter (item)->
     regexp.test(item?.name) || _(item?.aliases).find (alias)->
       regexp.test(alias)
@@ -193,9 +209,9 @@ player.resolve = (what) ->
   ordinal = require("./dist/ordinal.js")
   position = ordinal(groups[1])
   rest = groups[2]
-  regexp = new RegExp("^(" + rest + ")(.*)$", "i")
+  regexp = new RegExp("^(.*)\b(" + rest + ")(.*)$", "i")
   found = _(contents).filter (item)->
-    regexp.test(item?.name) || _(item?.aliases).find (alias)->
+    regexp.test(item?.name || "") || _(item?.aliases || []).find (alias)->
       regexp.test(alias)
   return found[position-1] if found.length > 0 and position > 0 and found.length > position-1
   return undefined if found.length == 0
