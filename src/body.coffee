@@ -1,43 +1,3 @@
-global.$game.constants.HumanBody.coverageAreas = [
-  "head"
-  "scalp"
-  "mouth"
-  "throat"
-  "neck"
-  "left eye"
-  "right eye"
-  "nose"
-  "right ear"
-  "left ear"
-  "left shoulder"
-  "right shoulder"
-  "left arm"
-  "right arm"
-  "left forearm"
-  "right forearm"
-  "left hand"
-  "right hand"
-  "left thumb"
-  "right thumb"
-  "left index finger"
-  "right index finger"
-  "left middle finger"
-  "right middle finger"
-  "left ring finger"
-  "right ring finger"
-  "left pinky finger"
-  "right pinky finger"
-  "groin"
-  "left thigh"
-  "right thigh"
-  "left knee"
-  "right knee"
-  "left leg"
-  "right leg"
-  "left foot"
-  "right foot"
-]
-
 if not global.$game.classes.BodyPart
   global.$game.classes.BodyPart = class BodyPart
     constructor:->
@@ -46,64 +6,73 @@ if not global.$game.classes.BodyPart
 
 part = global.$game.classes.BodyPart.prototype
 
-part.init = (@name, @bones, @removable, @critical, @parts)->
+part.init = (@name, @bones, @coverable, @removable, @critical, @parts)->
   @condition = {}
   @wearing = []
-  @contents = []
 
 part.findPart = (name)->
-  return this if name == @name || name.test?(@name)
+  return this if name == @name || @name.indexOf(name) == 0 || name.test?(@name)
   require("underscore").find @parts, (part)->
     part.findPart(name)
 
-part.isEmpty = ->
-  return if @contents?.length || 0 > 1 then false else true
+part.coverageMap = (map = {})->
+  return map if not @coverable
+  map[@name] = this
+  @parts.forEach (part)->
+    part.coverageMap map
+  map
 
-global.$game.common.makeBodyPart = (name, bones = [], removable = false, critical = false, parts={})->
-  new global.$game.classes.BodyPart name, bones, removable, critica, parts
+global.$game.common.makeBodyPart = (name, bones = [], coverable = false, removable = false, critical = false, parts={})->
+  new global.$game.classes.BodyPart name, bones, coverable, removable, critical, parts
 
 global.$game.common.makeHead = ->
   makeBodyPart = global.$game.common.makeBodyPart
-  makeBodyPart("head", ["skull", "jaw", "teeth"], true, true,
-    scalp:makeBodyPart "scalp", [], false, false
-    throat:makeBodyPart "throat", [], false, true
-    neck:makeBodyPart "neck" ["spine"], false, true
-    rightEar:makeBodyPart "right ear", [], true, false
-    leftEar:makeBodyPart "left ear", [], true, false
-    face:makeBodyPart "face", [], false, false,
-      leftEye:makeBodyPart "left eye", [], true, false
-      rightEye:makeBodyPart "right eye", [], true, false
-      mouth:makeBodyPart "mouth", [], false, false
-      nose:makeBodyPart "nose", [], true, false
+  makeBodyPart("head", ["skull", "jaw", "teeth"], true, true, true,
+    scalp:makeBodyPart "scalp", [], true, false, false
+    throat:makeBodyPart "throat", ["larynx"], true, false, true
+    neck:makeBodyPart "neck" ["spine"], true, false, true
+    rightEar:makeBodyPart "right ear", [], true, true, false
+    leftEar:makeBodyPart "left ear", [], true, true, false
+    face:makeBodyPart "face", [], true, false, false,
+      leftEye:makeBodyPart "left eye", [], true, true, false
+      rightEye:makeBodyPart "right eye", [], true, true, false
+      mouth:makeBodyPart "mouth", [], true, false, false
+      nose:makeBodyPart "nose", [], true, true, false
 
 global.$game.common.makeArm = (leftOrRight)->
   makeBodyPart = global.$game.common.makeBodyPart
-  makeBodyPart leftOrRight + " shoulder", ["clavical", "scapula"], false, false,
-    arm:makeBodyPart leftOrRight + " arm", ["humerus"], true, false,
-      forearm:makeBodyPart leftOrRight + " forearm", ["radius", "ulna"], true, false,
-        hand:makeBodyPart leftOrRight + " hand", ["wrist"], true, false,
-          thumb:makeBodyPart leftOrRight + " thumb", ["metacarpals", "phalanges"], true
-          index:makeBodyPart leftOrRight + " index finger", ["metacarpals", "phalanges"], true
-          middle:makeBodyPart leftOrRight + " middle finger", ["metacarpals", "phalanges"], true
-          ring:makeBodyPart leftOrRight + " ring finger", ["metacarpals", "phalanges"], true
-          pinky:makeBodyPart leftOrRight + " pinky finger", ["metacarpals", "phalanges"], true
+  makeBodyPart leftOrRight + " shoulder", ["clavical", "scapula"], true, false, false,
+    arm:makeBodyPart leftOrRight + " arm", ["humerus"], true, true, false,
+      forearm:makeBodyPart leftOrRight + " forearm", ["radius", "ulna"], true, true, false,
+        hand:makeBodyPart leftOrRight + " hand", ["wrist"], true, true, false,
+          thumb:makeBodyPart leftOrRight + " thumb", ["metacarpals", "phalanges"], true, true, false
+          index:makeBodyPart leftOrRight + " index finger", ["metacarpals", "phalanges"], true, true, false
+          middle:makeBodyPart leftOrRight + " middle finger", ["metacarpals", "phalanges"], true, true, false
+          ring:makeBodyPart leftOrRight + " ring finger", ["metacarpals", "phalanges"], true, true, false
+          pinky:makeBodyPart leftOrRight + " pinky finger", ["metacarpals", "phalanges"], true, true, false
 
 global.$game.common.makeLeg = (leftOrRight)->
   makeBodyPart = global.$game.common.makeBodyPart
-  makeBodyPart leftOrRight + " thigh", ["femur"], true, false,
-    knee:makeBodyPart leftOrRight + " knee", ["knee cap"], true, false,
-      leg:makeBodyPart leftOrRight + " leg", ["tibia", "fibula"], true, false,
-       foot:makeBodyPart leftOrRight + " foot", ["metatarsus", "metatarsal"], true, false
+  makeBodyPart leftOrRight + " thigh", ["femur"], true, true, false,
+    knee:makeBodyPart leftOrRight + " knee", ["knee cap"], true, true, false,
+      leg:makeBodyPart leftOrRight + " leg", ["tibia", "fibula"], true, true, false,
+       foot:makeBodyPart leftOrRight + " foot", ["metatarsus", "metatarsal"], true, true, false
 
 global.$game.common.makePenis = ->
   makeBodyPart = global.$game.common.makeBodyPart
-  makeBodyPart "groin", [], false, false,
-    penis:makeBodyPart "penis", [], true, false
-    leftTestical:makeBodyPart "left testical", [], true, false
-    rightTestical:makeBodyPart "right testical", [], true, false
+  makeBodyPart "groin", ["pelvis"], true, false, false,
+    penis:makeBodyPart "penis", [], false, true, false
+    leftTestical:makeBodyPart "left testical", [], false, true, false
+    rightTestical:makeBodyPart "right testical", [], false, true, false
 
 global.$game.common.makeVagina = ->
-  global.$game.common.makeBodyPart "vagina", [], false, false
+  makeBodyPart = global.$game.common.makeBodyPart
+  makeBodyPart "groin", ["pelvis"], true, false, false,
+    global.$game.common.makeBodyPart "vagina", [], false, false, false
+
+global.$game.common.makeNeuter = ->
+  makeBodyPart = global.$game.common.makeBodyPart
+  makeBodyPart "groin", ["pelvis"], true, false, false
 
 if not global.$game.classes.HumanBody
   global.$game.classes.HumanBody = class HumanBody
@@ -114,13 +83,18 @@ if not global.$game.classes.HumanBody
 body = global.$game.classes.HumanBody.prototype
 
 body.init = (@sex = "female", @primaryHand = "right")->
-  @torso = global.$game.common.makeBodyPart "torso", ["ribs", "spine"], false, true,
+  @torso = global.$game.common.makeBodyPart "torso", [], true, false, true,
     head:global.$game.common.makeHead()
     rightShoulder:global.$game.common.makeArm("right")
     leftShoulder:global.$game.common.makeArm("left")
     rightThigh:global.$game.common.makeLeg("right")
     leftThigh:global.$game.common.makeLeg("left")
-    groin:@sex == "male" ? global.$game.common.makePenis() : global.$game.common.makeVagina()
+    groin:@sex == "male" ? global.$game.common.makePenis() : @sex == "female" ? global.$game.common.makeVagina() : global.$game.common.makeNeuter()
+    leftChest:global.$game.common.makeBodyPart "left half of the chest", ["ribs"], true, false, false
+    rightChest:global.$game.common.makeBodyPart "right half of the chest", ["ribs"], true, false, false
+    stomach:global.$game.common.makeBodyPart "stomach", [], true, false, false
+    back:global.$game.common.makeBodyPart "back", ["spine"], true, false, false
+  @inLeftHand = @inRightHand = undefined
 
 body.getTorso = ->
   @torso
